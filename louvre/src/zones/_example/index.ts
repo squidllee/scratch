@@ -336,6 +336,8 @@ export const createZone = (ctx: ZoneContext): Zone => {
   return {
     id: 'example',
     rooms: shiftedRooms,
+    // Matches the engine default, so the proof gallery looks unchanged while exercising the hook.
+    atmosphere: { background: 0x0a0b0d, fog: { color: 0x0a0b0d, density: 0.0026 } },
     group,
     roomGroups,
     spawnPoints: shiftedSpawns,

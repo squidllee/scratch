@@ -278,6 +278,13 @@ const collisionProbes = (): Record<string, boolean> => {
   zone: zoneId,
   spawns: spawns.map((s) => s.id),
   rooms: rooms.map((r) => r.id),
+  /** What the engine actually has on the scene right now, for asserting the atmosphere hook. */
+  atmosphere: () => ({
+    declaredByZone: Boolean(zone?.atmosphere),
+    background: engine.scene.background instanceof THREE.Color ? '#' + engine.scene.background.getHexString() : null,
+    fog: engine.scene.fog ? (engine.scene.fog as THREE.FogExp2).density ?? null : null,
+    fogColour: engine.scene.fog ? '#' + (engine.scene.fog as THREE.FogExp2).color.getHexString() : null,
+  }),
   pixelStats,
   structure,
   /**

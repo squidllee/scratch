@@ -292,6 +292,12 @@ async function main() {
     probeReport = hits;
   }
 
+  const atmosphere = await page.evaluate(() => window.__test.atmosphere());
+  console.log('atmosphere: ' + JSON.stringify(atmosphere));
+  if (atmosphere.declaredByZone && (!atmosphere.background || atmosphere.fog === null)) {
+    failures.push({ check: 'atmosphere', value: atmosphere, message: 'zone declared an atmosphere but the scene has no background/fog applied' });
+  }
+
   const scene = await page.evaluate(() => window.__test.structure());
   if (scene.instances && scene.instances.outsideRooms > 0) {
     failures.push({
@@ -319,6 +325,7 @@ async function main() {
     verified: verify,
     shots: shots.map((s) => ({ file: s.file, stats: s.stats, pixels: s.pixels })),
     collision,
+    atmosphere,
     probe: probeReport,
     structure: { rooms: scene.rooms, bounds: scene.bounds, artworkIds: scene.artworkIds, instances: scene.instances },
     structureCheck: structureReport,
