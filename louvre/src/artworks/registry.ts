@@ -71,7 +71,10 @@ export function createArtwork(def: ArtworkSpec, ctx: ArtworkContext): THREE.Obje
   let obj: THREE.Group;
   if (SCULPTORS[entry.build]) {
     obj = SCULPTORS[entry.build](r);
-    if (!NO_FIT.has(entry.id)) fitToHeight(obj, def.sizeCm[1] / 100);
+    // fitToHeight returns a wrapper: the fitted group carries a centring offset inside it, and
+    // keeping the inner object would leave a non-zero position, which makes `placeArtwork` skip the
+    // placement and pile every sculpture on the origin.
+    if (!NO_FIT.has(entry.id)) obj = fitToHeight(obj, def.sizeCm[1] / 100);
   } else if (entry.kind === 'painting' || entry.kind === 'ceiling-painting') {
     obj = buildPainting(target, r);
   } else {

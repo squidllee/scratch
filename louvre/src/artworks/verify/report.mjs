@@ -120,6 +120,14 @@ for (const art of report) {
   if (art.kind !== 'painting' && art.kind !== 'ceiling-painting' && Math.abs(art.floorGap) > 0.02) {
     invariants.push('base ' + (art.floorGap * 100).toFixed(1) + ' cm off its placement point');
   }
+  if (art.placementGap) {
+    const [gx, gz] = art.placementGap;
+    const tolX = art.bboxM[0] / 2 + 0.08;
+    const tolZ = art.bboxM[2] / 2 + 0.08;
+    if (Math.abs(gx) > tolX || Math.abs(gz) > tolZ) {
+      invariants.push('stands ' + gx.toFixed(2) + '/' + gz.toFixed(2) + ' m off its placement point');
+    }
+  }
   if (art.triangles < minTris) invariants.push('only ' + Math.round(art.triangles) + ' tris (floor ' + minTris + ')');
   if (invariants.length) failures.push({ id: art.id, invariants });
   rows.push({

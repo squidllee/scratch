@@ -8,6 +8,7 @@
  */
 import * as THREE from 'three';
 import { EngineRenderer } from '../../core/renderer';
+import { pickFloorAt, roomFloorAt, type RoomDef } from '../../core/culling';
 import { buildGallery } from './gallery';
 import { ARTWORK_IDS, canvasInventory, textureBytes, textureLedger } from '../index';
 
@@ -57,7 +58,16 @@ const stats = (): Record<string, number> => {
   };
 };
 
-const pixelStats = (): { width: number; height: number; mean: number; std: number; uniqueColours: number; sampled: number } => {
+const pixelStats = (): {
+  width: number;
+  height: number;
+  mean: number;
+  centreMean: number;
+  environment: boolean;
+  std: number;
+  uniqueColours: number;
+  sampled: number;
+} => {
   engine.renderNow();
   const gl = engine.renderer.getContext();
   const width = gl.drawingBufferWidth;
@@ -80,10 +90,26 @@ const pixelStats = (): { width: number; height: number; mean: number; std: numbe
   }
   const mean = n > 0 ? sum / n : 0;
   const variance = n > 0 ? Math.max(0, sumSq / n - mean * mean) : 0;
+  // Mean luminance of the central fifth: what one surface reads as, not the whole frame.
+  let centreSum = 0;
+  let centreN = 0;
+  const cx0 = Math.floor(width * 0.4);
+  const cx1 = Math.floor(width * 0.6);
+  const cy0 = Math.floor(height * 0.4);
+  const cy1 = Math.floor(height * 0.6);
+  for (let y = cy0; y < cy1; y += 2) {
+    for (let x = cx0; x < cx1; x += 2) {
+      const i = (y * width + x) * 4;
+      centreSum += 0.2126 * buf[i] + 0.7152 * buf[i + 1] + 0.0722 * buf[i + 2];
+      centreN++;
+    }
+  }
   return {
     width,
     height,
     mean: Math.round(mean * 10) / 10,
+    centreMean: Math.round((centreN > 0 ? centreSum / centreN : 0) * 10) / 10,
+    environment: false,
     std: Math.round(Math.sqrt(variance) * 10) / 10,
     uniqueColours: seen.size,
     sampled: n,
@@ -124,8 +150,118 @@ const structure = (): Record<string, unknown> => {
       max: [round(box.max.x), round(box.max.y), round(box.max.z)],
     },
     artworkIds,
+    instances: instanceReport(),
     drawCalls: engine.stats.drawCalls,
     triangles: engine.stats.triangles,
+  };
+};
+
+/**
+ * Instance placement audit, in the shape the harness reads: a merged InstancedMesh that lost its
+ * group transform still draws, just somewhere it does not belong. The gallery draws no instanced
+ * meshes today, so this reports a zero count — the check exists so it stays honest if one appears.
+ */
+const instanceReport = (): { count: number; outsideRooms: number; outsideBounds: number; duplicatePositions: number } => {
+  const result = { count: 0, outsideRooms: 0, outsideBounds: 0, duplicatePositions: 0 };
+  layout.group.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(layout.group);
+  const m = new THREE.Matrix4();
+  const v = new THREE.Vector3();
+  layout.group.traverse((o) => {
+    const im = o as THREE.InstancedMesh;
+    if (!im.isInstancedMesh) return;
+    const seen = new Map<string, number>();
+    for (let i = 0; i < im.count; i++) {
+      im.getMatrixAt(i, m);
+      v.setFromMatrixPosition(m).applyMatrix4(im.matrixWorld);
+      result.count++;
+      if (v.x < box.min.x - 8 || v.x > box.max.x + 8 || v.y < box.min.y - 8 || v.y > box.max.y + 8 || v.z < box.min.z - 8 || v.z > box.max.z + 8) {
+        result.outsideBounds++;
+      }
+      const key = Math.round(v.x * 100) + ':' + Math.round(v.y * 100) + ':' + Math.round(v.z * 100);
+      seen.set(key, (seen.get(key) ?? 0) + 1);
+    }
+    let worst = 0;
+    for (const n of seen.values()) worst = Math.max(worst, n);
+    if (worst > im.count * 0.1) result.duplicatePositions += worst;
+  });
+  return result;
+};
+
+/** The gallery declares no atmosphere of its own: a lit interior with a flat background. */
+const atmosphere = (): { declaredByZone: boolean; background: boolean; fog: boolean } => ({
+  declaredByZone: false,
+  background: engine.scene.background !== null,
+  fog: engine.scene.fog !== null,
+});
+
+/**
+ * Raycast from every spawn along its sight line. Pixel statistics cannot tell one painting from
+ * another; this says which material is actually under the sight line.
+ */
+const probe = (maxDistance = 150): Array<Record<string, unknown>> => {
+  const raycaster = new THREE.Raycaster();
+  raycaster.far = maxDistance;
+  const origin = new THREE.Vector3();
+  const dir = new THREE.Vector3();
+  const right = new THREE.Vector3();
+  const up = new THREE.Vector3();
+  const aim = new THREE.Vector3();
+  const out: Array<Record<string, unknown>> = [];
+  // The primary ray, then a small fan around it: a standing marble is a shell, so a ray aimed at the
+  // exact axis of a draped figure can pass through the gap between two folds and read as empty
+  // space. The fan asks "is this work visible from here at all", which is the question that matters.
+  const fan: Array<[number, number]> = [[0, 0], [4, 0], [-4, 0], [0, 4], [0, -4], [4, 4], [-4, 4], [4, -4], [-4, -4]];
+  for (const s of spawns) {
+    origin.set(s.position[0], s.position[1], s.position[2]);
+    aim.set(s.lookAt[0], s.lookAt[1], s.lookAt[2]);
+    dir.copy(aim).sub(origin).normalize();
+    right.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+    up.crossVectors(right, dir).normalize();
+    let best: { hit: THREE.Intersection; off: number } | null = null;
+    for (const [dx, dy] of fan) {
+      const d = dir
+        .clone()
+        .addScaledVector(right, Math.tan((dx * Math.PI) / 180))
+        .addScaledVector(up, Math.tan((dy * Math.PI) / 180))
+        .normalize();
+      raycaster.set(origin, d);
+      const hit = raycaster.intersectObject(layout.group, true)[0];
+      if (!hit) continue;
+      const off = Math.max(Math.abs(dx), Math.abs(dy));
+      // The fan is ordered by offset, so the first hit is the one closest to the intended sight line.
+      if (!best || off < best.off) best = { hit, off };
+    }
+    const mesh = best?.hit.object as THREE.Mesh | undefined;
+    const raw = mesh ? (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) : null;
+    out.push({
+      spawn: s.id,
+      object: best ? best.hit.object.name || '(unnamed)' : null,
+      material: raw ? raw.name || '(unnamed)' : null,
+      distance: best ? Math.round(best.hit.distance * 100) / 100 : null,
+      offCentreDeg: best ? best.off : null,
+    });
+  }
+  return out;
+};
+
+/** The engine's floor plumbing, proved on synthetic rooms — the harness asserts these values. */
+const floorProbe = (): Record<string, unknown> => {
+  const ramp: RoomDef = { id: 'probe-ramp', bounds: { min: [0, 0, 0], max: [4, 3, 6] }, floorAt: (_x: number, z: number) => z * 0.5 };
+  const flat: RoomDef = { id: 'probe-flat', bounds: { min: [0, 3, 0], max: [4, 6, 6] } };
+  const courtyard: RoomDef = { id: 'probe-courtyard', bounds: { min: [-5, 0, -5], max: [5, 21.7, 5] } };
+  const hall: RoomDef = { id: 'probe-hall', bounds: { min: [-5, -9, -5], max: [5, 0, 5] } };
+  const undercroft: RoomDef = { id: 'probe-undercroft', bounds: { min: [-5, -18, -5], max: [5, -9, 5] } };
+  const stack = [courtyard, hall, undercroft];
+  return {
+    rampAtStart: roomFloorAt(ramp, 1, 0),
+    rampAtEnd: roomFloorAt(ramp, 1, 6),
+    flat: roomFloorAt(flat, 1, 3),
+    atSpawn: roomFloorAt({ id: 'gallery', bounds: layout.bounds }, spawn.position[0], spawn.position[2]),
+    stackOnCourtyard: pickFloorAt(stack, 0, 0, 1.65),
+    stackOnHall: pickFloorAt(stack, 0, 0, -7.35),
+    stackOnUndercroft: pickFloorAt(stack, 0, 0, -16.35),
+    stairBands: [1.65, 0.2, -0.4, -3.0, -7.35].map((eye) => pickFloorAt(stack, 0, 0, eye)),
   };
 };
 
@@ -159,6 +295,15 @@ const artworkReport = (): Array<Record<string, unknown>> => {
       meshes,
       min: [round(box.min.x), round(box.min.y), round(box.min.z)],
       floorGap: placement ? round(box.min.y - placement.position[1]) : null,
+      // The object must straddle the point it was placed at. A work left at the origin passes every
+      // size and floor check while standing in the wrong part of the hall, which is exactly what
+      // happened when the fitted group's wrapper was thrown away.
+      placementGap: placement
+        ? [
+            round((box.min.x + box.max.x) / 2 - placement.position[0]),
+            round((box.min.z + box.max.z) / 2 - placement.position[2]),
+          ]
+        : null,
     });
   }
   return out.sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -258,6 +403,9 @@ w.__test = {
   rooms: ['gallery'],
   pixelStats,
   structure,
+  probe,
+  atmosphere,
+  floorProbe,
   artworkReport,
   canvasStats,
   textures: () => textureLedger(),
