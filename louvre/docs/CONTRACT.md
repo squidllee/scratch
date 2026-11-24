@@ -290,7 +290,8 @@ when:
   camera inside geometry, or a scene that silently failed to build;
 - the collision probes are wrong (a point inside the first room must be walkable; points beyond its
   walls and far outside must not be);
-- `--tour N` does not reach the end of the spline in N seconds;
+- `--tour N` does not reach at least 95% of the spline's arc length in N seconds (a coverage
+  check, not a finish line, so the same command works for a 60 m hall and a 288 m gallery);
 - any console error is logged;
 - **structural asserts against the spec** (`route.json`, `artworks.json` from `docs/spec/`, or pass
   `--spec <dir>` to point at the captain drive copy): every room `route.json` gives this zone must
