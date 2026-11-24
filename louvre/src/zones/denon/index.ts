@@ -4,7 +4,7 @@ import type { RoomDef, RoomPortal } from '../../core/culling';
 import type { SpawnPoint } from '../../core/controls';
 import type { Zone, ZoneContext } from '../types';
 import { BOX, PORTALS } from './layout';
-import { buildEscalierDaru, buildGalerieMichelAnge, stairHeightAt } from './stair';
+import { buildEscalierDaru, buildGalerieMichelAnge, stairFloor } from './stair';
 import {
   buildSalleDaru,
   buildSalleDenon,
@@ -52,7 +52,7 @@ function roomsOf(ids: string[]): RoomDef[] {
     const b = BOX[id] as (typeof BOX)[string];
     const links = PORTALS[id] ?? [];
     const portals = links.map((_, i) => portalFor(id, i)).filter((p): p is RoomPortal => p !== null);
-    return {
+    const room: RoomDef = {
       id,
       bounds: {
         min: [b.x0, b.y0, b.z0] as [number, number, number],
@@ -60,6 +60,9 @@ function roomsOf(ids: string[]): RoomDef[] {
       },
       portals,
     };
+    // The Daru staircase is the one room in the wing whose floor is not a single height.
+    if (id === 'escalier-daru') room.floorAt = stairFloor;
+    return room;
   });
 }
 
@@ -163,19 +166,19 @@ export const createZone = (ctx: ZoneContext): Zone => {
     {
       id: 'grande-galerie-west',
       position: [-166, 7 + EYE, 147.5],
-      lookAt: [40, 9.6, 147.5],
+      lookAt: [-30, 7.0, 147.5],
       label: 'Grande Galerie, west end, looking east',
     },
     {
       id: 'grande-galerie-east',
       position: [91, 7 + EYE, 147.5],
-      lookAt: [-60, 9.6, 147.5],
+      lookAt: [-45, 7.0, 147.5],
       label: 'Grande Galerie, east end, looking west',
     },
     {
       id: 'salon-carre',
       position: [112.5, 7 + EYE, 147.5],
-      lookAt: [94, 9.2, 147.5],
+      lookAt: [52.5, 7.4, 147.5],
       label: 'Salon Carre, looking back west into the gallery',
     },
   ];
@@ -191,14 +194,6 @@ export const createZone = (ctx: ZoneContext): Zone => {
       const x = camera.position.x;
       for (const cell of cells) {
         cell.group.visible = x > cell.x0 - GG_DRAW_AHEAD && x < cell.x1 + GG_DRAW_AHEAD;
-      }
-      // Walking up the Daru staircase: the engine's floor lookup is per room, so the stair is
-      // carried here instead of pretending each tread is a room.
-      const py = camera.position.y;
-      const stair = stairHeightAt(camera.position.x, camera.position.z);
-      if (stair !== null) {
-        const target = stair + EYE;
-        if (py < target + 1.6) camera.position.y = target;
       }
     },
     dispose(): void {

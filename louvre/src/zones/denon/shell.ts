@@ -13,7 +13,7 @@ import {
   wall,
   windowRow,
 } from '../../core/builders';
-import { isInstanced, type Opening } from '../../core/builders/types';
+import type { Opening } from '../../core/builders/types';
 import type { ArtworkSpec } from '../../artworks/types';
 import { placeArtwork } from '../../artworks/library';
 
@@ -311,13 +311,7 @@ export function arcBand(opts: { span: number; rise: number; depth: number; width
   return mergeAll(parts);
 }
 
-/**
- * A run of tall windows cut through one wall.
- *
- * `windowRow` returns instanced frames, and `mergeByMaterial` keeps an instanced mesh but drops the
- * transform of the group it sat in — so the wall placement is baked into the instance matrices here
- * rather than left on a parent object.
- */
+/** A run of tall windows cut through one wall (frames instanced, one shared glass sheet). */
 export function windows(
   g: THREE.Group,
   f: Frame,
@@ -333,22 +327,10 @@ export function windows(
     thickness: opts.t,
     mullions: 1,
   });
-  const pos = new THREE.Vector3();
-  if (f.side === 'n' || f.side === 's') pos.set(f.ct, b.y0, f.pz + f.nz * 0.03);
-  else pos.set(f.px + f.nx * 0.03, b.y0, f.ct);
-  const placement = new THREE.Matrix4().compose(
-    pos,
-    new THREE.Quaternion().setFromEuler(new THREE.Euler(0, f.rot, 0)),
-    new THREE.Vector3(1, 1, 1),
-  );
-  for (const [key, part] of Object.entries(row)) {
-    if (isInstanced(part)) {
-      for (const m of part.transforms) m.premultiply(placement);
-      addPart(g, part, key);
-    } else {
-      addPart(g, part.applyMatrix4(placement), key);
-    }
-  }
+  const holder = new THREE.Group();
+  addParts(holder, row);
+  put(holder, f, f.ct, b.y0, 0.03);
+  g.add(holder);
 }
 
 /** A gilt frame with a blank canvas, centred at world `t` on the wall, `y` above the floor. */

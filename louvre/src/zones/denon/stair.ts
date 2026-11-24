@@ -39,14 +39,19 @@ export const STAIR = {
   landingZ0: 88,
 };
 
-/** Height of the stair surface at a world point, used by the walk assist in update(). */
-export function stairHeightAt(x: number, z: number): number | null {
+/**
+ * Walking height across the stair hall: the ramp of the flight, the landing, or the ground.
+ *
+ * This is the room's `floorAt`, so the walker climbs the stair itself — the zone never touches the
+ * camera.
+ */
+export function stairFloor(x: number, z: number): number {
   const half = STAIR.width / 2;
-  const inFlight = x >= STAIR.x - half && x <= STAIR.x + half && z >= STAIR.z0 && z <= STAIR.landingZ0;
-  if (inFlight) return ((z - STAIR.z0) / STAIR.run) * STAIR.rise;
-  const inLanding = z >= STAIR.landingZ0 && z <= 96 && x >= 62 && x <= 82;
-  if (inLanding) return STAIR.rise;
-  return null;
+  if (x >= STAIR.x - half && x <= STAIR.x + half && z >= STAIR.z0 && z <= STAIR.landingZ0) {
+    return ((z - STAIR.z0) / STAIR.run) * STAIR.rise;
+  }
+  if (z >= STAIR.landingZ0) return STAIR.rise;
+  return 0;
 }
 
 const victory: ArtworkSpec = {
