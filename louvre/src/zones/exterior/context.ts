@@ -108,10 +108,13 @@ export function distantCity(sink: InstanceSink, rng: Rng): void {
       });
     }
   };
-  band(-900, 900, -620, -230, 90, 12, 26);
-  band(430, 900, -220, 260, 50, 12, 24);
-  band(-900, -560, -220, 260, 50, 12, 24);
-  band(-700, 900, 540, 780, 70, 10, 22);
+  // 140 blocks, not 260: the assembled museum's heaviest viewpoint (the Cour Carrée, looking out
+  // over the roofs) sat 727 triangles over the 300k ceiling, and the city beyond the palace is the
+  // first thing on SCRA-6's ranked cut list. The band coverage is unchanged; only the density is.
+  band(-900, 900, -620, -230, 48, 12, 26);
+  band(430, 900, -220, 260, 27, 12, 24);
+  band(-900, -560, -220, 260, 27, 12, 24);
+  band(-700, 900, 540, 780, 38, 10, 22);
 
   for (const b of blocks) {
     const m = new THREE.Matrix4()

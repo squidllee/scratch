@@ -144,11 +144,21 @@ for (const zone of loadedZones) {
 
 const requestedSpawn = params.get('spawn');
 const bare = (id: string): string => id.slice(id.indexOf('/') + 1);
-const spawn =
+const resolved =
   spawns.find((s) => s.id === requestedSpawn) ??
   spawns.find((s) => bare(s.id) === requestedSpawn) ??
-  spawns.find((s) => s.id === 'pyramid/cour-napoleon') ??
-  spawns[0] ?? { id: 'origin', position: [0, 1.65, 8] as const, lookAt: [0, 2, -6] as const };
+  spawns.find((s) => s.id === 'pyramid/pyramid-inside');
+const spawn = resolved ?? spawns[0] ?? { id: 'origin', position: [0, 1.65, 8] as const, lookAt: [0, 2, -6] as const };
+/**
+ * A spawn id that does not exist must say so. Falling back silently made three different capture
+ * viewpoints produce three identical frames, and the run still passed every pixel floor.
+ */
+if (requestedSpawn && !resolved) {
+  banner.style.display = 'block';
+  banner.textContent =
+    'No spawn point "' + requestedSpawn + '". Using ' + spawn.id + '. Available: ' +
+    spawns.slice(0, 8).map((s) => s.id).join(', ') + (spawns.length > 8 ? ', …' : '');
+}
 
 const tour = buildTour(routeSpec.route as RouteStep[], rooms);
 const tourPath: TourWaypoint[] = tour.waypoints;
