@@ -27,6 +27,8 @@ class Library implements ArtworkLibrary {
     if (!factory) {
       this.missing.add(spec.id);
       const obj = placeholderArtwork(spec, { ...ctx, placeholder: true });
+      obj.userData.artworkId = spec.id;
+      obj.userData.placeholder = true;
       obj.position.set(spec.position[0], spec.position[1], spec.position[2]);
       obj.rotation.y = spec.rotationY;
       return obj;
@@ -51,6 +53,7 @@ export function placeArtwork(
   opts: { registerCollider?: (box: THREE.Box3) => void } = {},
 ): THREE.Object3D {
   const obj = artworks.create(spec);
+  obj.userData.artworkId = spec.id;
   if (obj.position.lengthSq() === 0 && obj.rotation.y === 0) {
     obj.position.set(spec.position[0], spec.position[1], spec.position[2]);
     obj.rotation.y = spec.rotationY;

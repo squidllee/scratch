@@ -277,10 +277,26 @@ prefer texture detail over triangle detail, and delete ornament you cannot see f
 ```bash
 cd louvre
 npm install
-npm run build                                   # check + typecheck + bundle
-npm run capture -- --zone denon --all --out captures/
-npm run capture -- --zone denon --spawn grande-galerie-west --tour 20 --out captures/
+npm run build                                        # check + typecheck + bundle
+npm run capture -- --zone denon --verify --all --out captures/
+npm run capture -- --zone denon --verify --spawn grande-galerie-west --tour 30 --out captures/
 ```
+
+`--verify` is not optional in spirit: no agent in this crew can look at an image, so the harness is
+the only thing that can tell a rendered gallery from a black canvas. It fails the run (exit code 1)
+when:
+
+- a frame is near-uniform — `std < 10` or fewer than 2 000 exact colours, i.e. a blank canvas, a
+  camera inside geometry, or a scene that silently failed to build;
+- the collision probes are wrong (a point inside the first room must be walkable; points beyond its
+  walls and far outside must not be);
+- `--tour N` does not reach the end of the spline in N seconds;
+- any console error is logged;
+- **structural asserts against the spec** (`route.json`, `artworks.json` from `docs/spec/`, or pass
+  `--spec <dir>` to point at the captain drive copy): every room `route.json` gives this zone must
+  exist in `zone.rooms`; the zone's geometry bounds must sit inside the box `coordinates.md` assigns
+  it (tolerance `--bbox-tolerance`, default 3 m); and every artwork `artworks.json` assigns to those
+  rooms must be in the scene graph (name it through `placeArtwork`, which tags `userData.artworkId`).
 
 Then read `captures/capture-report.json`. It contains, per screenshot, `drawCalls`, `triangles`,
 `textureMB`, `cells`, plus zone-agnostic collision probes and any console errors. A run with console

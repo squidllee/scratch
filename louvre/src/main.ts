@@ -128,6 +128,90 @@ engine.renderNow();
 const stats = (): ReturnType<PerfHud['snapshot']> => hud.snapshot();
 (window as unknown as Record<string, unknown>).__stats = stats;
 (window as unknown as Record<string, unknown>).__ready = true;
+/**
+ * Read the framebuffer back and describe it. A human cannot look at a headless capture, so this is
+ * how a blank canvas, a washed-out frame, or a scene that silently failed to build gets caught:
+ * a render with real geometry has spread and colour variety, a failure does not.
+ */
+const pixelStats = (): {
+  width: number;
+  height: number;
+  mean: number;
+  std: number;
+  uniqueColours: number;
+  sampled: number;
+} => {
+  engine.renderNow();
+  const gl = engine.renderer.getContext();
+  const width = gl.drawingBufferWidth;
+  const height = gl.drawingBufferHeight;
+  const buf = new Uint8Array(width * height * 4);
+  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+  const seen = new Set<number>();
+  let sum = 0;
+  let sumSq = 0;
+  let n = 0;
+  const step = 2;
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      const i = (y * width + x) * 4;
+      const lum = 0.2126 * (buf[i] as number) + 0.7152 * (buf[i + 1] as number) + 0.0722 * (buf[i + 2] as number);
+      sum += lum;
+      sumSq += lum * lum;
+      n++;
+      seen.add(((buf[i] as number) << 16) | ((buf[i + 1] as number) << 8) | (buf[i + 2] as number));
+    }
+  }
+  const mean = n > 0 ? sum / n : 0;
+  const variance = n > 0 ? Math.max(0, sumSq / n - mean * mean) : 0;
+  return {
+    width,
+    height,
+    mean: Math.round(mean * 10) / 10,
+    std: Math.round(Math.sqrt(variance) * 10) / 10,
+    uniqueColours: seen.size,
+    sampled: n,
+  };
+};
+
+/** What the verify step in the capture harness asserts against the spec. */
+const structure = (): {
+  zone: string;
+  rooms: string[];
+  spawns: string[];
+  bounds: { min: [number, number, number]; max: [number, number, number] } | null;
+  artworkIds: string[];
+  drawCalls: number;
+  triangles: number;
+} => {
+  const artworkIds: string[] = [];
+  zone?.group.traverse((o) => {
+    const id = o.userData?.artworkId;
+    if (typeof id === 'string') artworkIds.push(id);
+  });
+  let bounds: { min: [number, number, number]; max: [number, number, number] } | null = null;
+  if (zone) {
+    const box = new THREE.Box3().setFromObject(zone.group);
+    if (!box.isEmpty()) {
+      bounds = {
+        min: [round(box.min.x), round(box.min.y), round(box.min.z)],
+        max: [round(box.max.x), round(box.max.y), round(box.max.z)],
+      };
+    }
+  }
+  return {
+    zone: zoneId,
+    rooms: rooms.map((r) => r.id),
+    spawns: spawns.map((s) => s.id),
+    bounds,
+    artworkIds,
+    drawCalls: engine.stats.drawCalls,
+    triangles: engine.stats.triangles,
+  };
+};
+
+const round = (v: number): number => Math.round(v * 100) / 100;
+
 /** Zone-agnostic collision probes: one point that must be walkable, three that must not. */
 const collisionProbes = (): Record<string, boolean> => {
   const b = rooms[0]?.bounds;
@@ -148,6 +232,8 @@ const collisionProbes = (): Record<string, boolean> => {
   zone: zoneId,
   spawns: spawns.map((s) => s.id),
   rooms: rooms.map((r) => r.id),
+  pixelStats,
+  structure,
   setCamera: (p: [number, number, number], l: [number, number, number]) => controls.setCamera(p, l),
   tourProgress: (seconds: number) => controls.tourProgressAfter(seconds),
 };

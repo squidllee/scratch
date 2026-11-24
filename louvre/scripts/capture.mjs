@@ -1,16 +1,21 @@
 #!/usr/bin/env node
 /**
- * Headless capture harness.
+ * Headless capture harness — the eyes of this crew.
  *
- * Every zone thread proves its work with this, so it has to work from a cold checkout:
+ * No agent in this project can look at an image, so a capture is not evidence unless the harness
+ * checks it. `--verify` adds two layers of proof on top of the PNG:
  *
- *   npm run build
- *   npm run capture -- --zone denon --spawn grande-galerie-west --out captures/
+ *   1. Pixel statistics read back from the WebGL framebuffer: a near-uniform frame (blank canvas,
+ *      failed build, camera inside a wall) fails on standard deviation and unique-colour count.
+ *   2. Structural asserts against the measured spec: every room `route.json` assigns to this zone
+ *      exists in the zone, the zone's bounds sit inside its spec box, and every artwork assigned to
+ *      those rooms is present in the scene graph.
+ *
+ * Usage:
  *   npm run capture -- --zone denon --all --out captures/
+ *   npm run capture -- --zone denon --verify --all
+ *   npm run capture -- --zone denon --verify --spawn grande-galerie-west --tour 30
  *   npm run capture -- --zone denon --camera 3,1.8,-8 --look 0,2,0
- *
- * It serves ./dist locally (or uses --url), drives Chromium through SwiftShader, waits for
- * window.__ready, writes PNGs, and prints window.__stats() as JSON.
  *
  * Frame rate under SwiftShader is meaningless. Quote draw calls, triangles and texture MB.
  */
@@ -49,6 +54,20 @@ const captureAll = Boolean(flag('all', false));
 const tourSeconds = Number(flag('tour', 0));
 const label = flag('name');
 const extraQuery = flag('query', '');
+const verify = Boolean(flag('verify', false));
+const bboxTolerance = Number(flag('bbox-tolerance', 3));
+
+/** Pixel verdict floors. Calibrated on the proof gallery: mean 78-85, std 38-42, ~25k colours. */
+const PIXEL_FLOOR = { std: 10, uniqueColours: 2000 };
+
+/** Spec zone taxonomy -> registry zone id. */
+const SPEC_ZONE = {
+  denon: 'denon-interior',
+  sully: 'sully-interior',
+  richelieu: 'richelieu-interior',
+  pyramid: 'pyramid-courtyard',
+  exterior: 'exterior-wings',
+};
 
 const CHROME_CANDIDATES = [
   process.env.CHROME_PATH,
@@ -96,6 +115,32 @@ function serveDist(root, listenPort) {
   });
 }
 
+/** Locate the measured spec: explicit --spec, the merged docs/spec, or the captain drive copy. */
+async function findSpec() {
+  const explicit = flag('spec');
+  const candidates = [
+    typeof explicit === 'string' ? explicit : null,
+    'docs/spec',
+    '/home/user/.capy/drive/captain-maomao/handoffs/louvre/spec',
+  ].filter(Boolean);
+  for (const dir of candidates) {
+    const root = resolve(String(dir));
+    try {
+      const route = JSON.parse(await readFile(join(root, 'route.json'), 'utf8'));
+      let artworks = null;
+      try {
+        artworks = JSON.parse(await readFile(join(root, 'artworks.json'), 'utf8'));
+      } catch {
+        artworks = null;
+      }
+      return { root, route, artworks };
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 async function main() {
   const dist = resolve('dist');
   if (!existsSync(join(dist, 'index.html'))) {
@@ -135,6 +180,7 @@ async function main() {
   });
   page.on('pageerror', (err) => consoleErrors.push('pageerror: ' + err.message));
 
+  const failures = [];
   const shots = [];
   const shoot = async (query, name) => {
     const url = base + '/?' + query;
@@ -144,10 +190,23 @@ async function main() {
       () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))),
     );
     const stats = await page.evaluate(() => window.__stats());
+    const pixels = await page.evaluate(() => window.__test.pixelStats());
     const file = join(outDir, name + '.png');
     await page.screenshot({ path: file, type: 'png' });
-    shots.push({ file, stats });
-    console.log('captured ' + file + '  draws=' + stats.drawCalls + ' tris=' + stats.triangles + ' texMB=' + stats.textureMB);
+    shots.push({ file, stats, pixels });
+    console.log(
+      'captured ' + file + '  draws=' + stats.drawCalls + ' tris=' + stats.triangles +
+      ' texMB=' + stats.textureMB + '  mean=' + pixels.mean + ' std=' + pixels.std +
+      ' colours=' + pixels.uniqueColours,
+    );
+    if (pixels.std < PIXEL_FLOOR.std) {
+      failures.push({ shot: name, check: 'pixel-std', value: pixels.std, floor: PIXEL_FLOOR.std,
+        message: 'frame is nearly uniform; nothing was rendered, or the camera is inside geometry' });
+    }
+    if (pixels.uniqueColours < PIXEL_FLOOR.uniqueColours) {
+      failures.push({ shot: name, check: 'pixel-colours', value: pixels.uniqueColours, floor: PIXEL_FLOOR.uniqueColours,
+        message: 'frame has almost no colour variety; the scene is blank or flat-lit' });
+    }
     return stats;
   };
 
@@ -177,26 +236,139 @@ async function main() {
   if (tourSeconds > 0) {
     const probe = await page.evaluate((s) => window.__test.tourProgress(s), tourSeconds);
     console.log('tour after ' + tourSeconds + 's: ' + JSON.stringify(probe));
+    if (probe.u < 1) {
+      failures.push({ check: 'tour', message: 'tour did not reach the end of the path in ' + tourSeconds + 's', value: probe.u });
+    }
   }
 
   const collision = await page.evaluate(() => window.__test.collision());
   console.log('collision probes: ' + JSON.stringify(collision));
+  if (collision.noRooms) {
+    failures.push({ check: 'collision', message: 'zone declared no rooms' });
+  } else {
+    for (const [name, ok] of Object.entries(collision)) {
+      const shouldPass = name === 'roomCentre';
+      if (ok !== shouldPass) {
+        failures.push({ check: 'collision', shot: name, value: ok, message: 'expected ' + shouldPass + ' at ' + name });
+      }
+    }
+  }
+
+  const scene = await page.evaluate(() => window.__test.structure());
+  let structureReport = { checked: false, reason: 'not requested', specRoot: null };
+  if (verify) {
+    structureReport = await verifyStructure(scene);
+  }
 
   const finalStats = shots[0]?.stats ?? (await page.evaluate(() => window.__stats()));
   console.log('stats: ' + JSON.stringify(finalStats));
+  if (consoleErrors.length) console.log('console errors: ' + JSON.stringify(consoleErrors.slice(0, 10)));
+  else console.log('console errors: none');
   if (consoleErrors.length) {
-    console.log('console errors: ' + JSON.stringify(consoleErrors.slice(0, 10)));
-  } else {
-    console.log('console errors: none');
+    failures.push({ check: 'console', message: consoleErrors.length + ' console error(s)', detail: consoleErrors.slice(0, 5) });
   }
-  await writeFile(
-    join(outDir, 'capture-report.json'),
-    JSON.stringify({ zone, shots: shots.map((s) => ({ file: s.file, stats: s.stats })), collision, consoleErrors }, null, 2),
-  );
+
+  const report = {
+    zone,
+    verified: verify,
+    shots: shots.map((s) => ({ file: s.file, stats: s.stats, pixels: s.pixels })),
+    collision,
+    structure: { rooms: scene.rooms, bounds: scene.bounds, artworkIds: scene.artworkIds },
+    structureCheck: structureReport,
+    failures,
+    consoleErrors,
+    verdict: failures.length === 0 ? 'pass' : 'fail',
+  };
+  await writeFile(join(outDir, 'capture-report.json'), JSON.stringify(report, null, 2));
+
+  if (verify) {
+    if (failures.length === 0) {
+      console.log('verify: PASS' + (structureReport.checked ? ' (pixels + structure)' : ' (pixels only: ' + structureReport.reason + ')'));
+    } else {
+      console.error('verify: FAIL — ' + failures.length + ' problem(s)');
+      for (const f of failures) console.error('  - [' + f.check + '] ' + (f.message ?? '') + (f.shot ? ' (' + f.shot + ')' : ''));
+    }
+  }
 
   await browser.close();
   if (server) await new Promise((r) => server.close(r));
   if (consoleErrors.length) process.exitCode = 2;
+  if (failures.length) process.exitCode = 1;
+
+  /** Structural asserts against the measured spec. */
+  async function verifyStructure(scene) {
+    const specZone = SPEC_ZONE[zone];
+    if (!specZone) {
+      return { checked: false, reason: 'zone "' + zone + '" has no spec counterpart (proof gallery)' };
+    }
+    const spec = await findSpec();
+    if (!spec) {
+      return { checked: false, reason: 'no route.json found (pass --spec <dir> or merge louvre/docs/spec)' };
+    }
+    const rooms = (spec.route.rooms ?? []).filter((r) => r.zone === specZone);
+    if (rooms.length === 0) {
+      return { checked: false, reason: 'route.json lists no rooms for ' + specZone };
+    }
+    const declared = new Set(scene.rooms);
+    const missingRooms = rooms.filter((r) => !declared.has(r.id)).map((r) => r.id);
+    if (missingRooms.length) {
+      failures.push({
+        check: 'rooms', value: missingRooms.length, expected: rooms.length,
+        message: 'route.json assigns ' + rooms.length + ' rooms to ' + specZone + '; missing: ' + missingRooms.join(', '),
+      });
+    }
+
+    const specMin = [Infinity, Infinity, Infinity];
+    const specMax = [-Infinity, -Infinity, -Infinity];
+    for (const r of rooms) {
+      specMin[0] = Math.min(specMin[0], r.footprint.x[0]);
+      specMin[2] = Math.min(specMin[2], r.footprint.z[0]);
+      specMax[0] = Math.max(specMax[0], r.footprint.x[1]);
+      specMax[2] = Math.max(specMax[2], r.footprint.z[1]);
+      specMin[1] = Math.min(specMin[1], r.floorY);
+      specMax[1] = Math.max(specMax[1], r.floorY + r.clearHeight_m);
+    }
+    let boundsOk = null;
+    if (scene.bounds) {
+      const b = scene.bounds;
+      boundsOk =
+        b.min[0] >= specMin[0] - bboxTolerance && b.max[0] <= specMax[0] + bboxTolerance &&
+        b.min[1] >= specMin[1] - bboxTolerance && b.max[1] <= specMax[1] + bboxTolerance &&
+        b.min[2] >= specMin[2] - bboxTolerance && b.max[2] <= specMax[2] + bboxTolerance;
+      if (!boundsOk) {
+        failures.push({
+          check: 'bounds', value: b,
+          expected: { min: specMin, max: specMax }, tolerance: bboxTolerance,
+          message: 'zone geometry leaves the box coordinates.md assigns to ' + specZone +
+            ' (min ' + specMin.map((n) => Math.round(n)).join(',') + ' / max ' + specMax.map((n) => Math.round(n)).join(',') + ')',
+        });
+      }
+    }
+
+    const roomIds = new Set(rooms.map((r) => r.id));
+    const expectedArtworks = (spec.artworks?.artworks ?? []).filter((a) => roomIds.has(a.room));
+    const present = new Set(scene.artworkIds);
+    const missingArtworks = expectedArtworks.filter((a) => !present.has(a.id)).map((a) => a.id);
+    if (missingArtworks.length) {
+      failures.push({
+        check: 'artworks', value: missingArtworks.length, expected: expectedArtworks.length,
+        message: 'artworks.json gives this zone ' + expectedArtworks.length + ' works; not in the scene: ' + missingArtworks.join(', '),
+      });
+    }
+
+    return {
+      checked: true,
+      specRoot: spec.root,
+      specZone,
+      roomsExpected: rooms.length,
+      roomsDeclared: scene.rooms.length,
+      missingRooms,
+      boundsOk,
+      artworksExpected: expectedArtworks.length,
+      artworksFound: expectedArtworks.length - missingArtworks.length,
+      missingArtworks,
+    };
+  }
 }
 
 main().catch(async (err) => {

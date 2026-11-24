@@ -49,6 +49,10 @@ npm run capture -- --zone denon --all --out captures/
 cat captures/capture-report.json
 ```
 
+Add `--verify` and the same run also asserts the frame is not blank (`std >= 10`, >= 2 000 distinct
+colours, read back from the WebGL framebuffer) and that the zone matches the measured spec. Exit
+code 1 means a check failed: do not report that capture as evidence.
+
 `capture-report.json` is the record:
 
 ```json
