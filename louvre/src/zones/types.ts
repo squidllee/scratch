@@ -29,13 +29,14 @@ export interface Zone {
   id: AnyZoneId;
   /** Rooms for portal culling and walk collision. Must cover all walkable interior space. */
   rooms: RoomDef[];
-  /** All of this zone's geometry. Steam: merge by material, one sub-group per room. */
+  /** All of this zone's geometry. Merge by material, one sub-group per room. */
   group: THREE.Group;
   /**
    * Per-room geometry, for portal culling: the engine hides a room's object when its cell is not
-   * active. Optional — a zone without it is drawn whole whenever any of its rooms is active.
+   * active. Required. A zone rendered as one block cannot be culled, and one that silently loses
+   * culling looks fine standing alone then blows the frame budget once assembled.
    */
-  roomGroups?: Map<string, THREE.Object3D>;
+  roomGroups: Map<string, THREE.Object3D>;
   /** Named viewpoints. The tour and the capture harness address these by id. */
   spawnPoints: SpawnPoint[];
   /** Optional per-frame work (animated water, flickering light, exhibit turntables). */

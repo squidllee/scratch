@@ -69,7 +69,7 @@ export interface Zone {
   id: AnyZoneId;                      // 'denon' | 'sully' | ...
   rooms: RoomDef[];                   // walkable cells + portals (see §5)
   group: THREE.Group;                 // your merged geometry
-  roomGroups?: Map<string, THREE.Object3D>; // per-room sub-groups, for culling (§5)
+  roomGroups: Map<string, THREE.Object3D>;  // REQUIRED: per-room sub-groups, for culling (§5)
   spawnPoints: SpawnPoint[];          // named viewpoints; also the guided-tour order
   update?(dt: number, camera: THREE.Camera): void; // optional per-frame work
   dispose(): void;                    // release every geometry you allocated
@@ -195,8 +195,10 @@ directions. `route.json`'s `zone` field uses the spec's own taxonomy (`denon-int
 `sully-interior`, `richelieu-interior`, `pyramid-courtyard`, `exterior-wings`); the **folder and
 registry id** are the short names in §1 (`denon`, `sully`, `richelieu`, `pyramid`, `exterior`).
 
-Culling only works per room if you give the zone `roomGroups: Map<roomId, Object3D>`. A zone
-without it is drawn whole whenever any of its rooms is active.
+`roomGroups` is **required**, one entry per room id. It is what makes culling and the per-room
+draw-call budget real: the engine sets `visible` per room group, so a room behind two walls costs
+nothing. A zone that returns its geometry as one block cannot be culled, and the type will not let
+you ship it that way.
 
 ## 6. Materials
 
