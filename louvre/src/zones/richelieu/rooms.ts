@@ -3,14 +3,14 @@ import { boxGeo, quadGeo, smoothstep } from '../../core/geom';
 import { addPart } from '../../core/merge';
 import { balustrade, cofferCeiling, cornice, doorway, pilaster } from '../../core/builders';
 import {
-  crossing,
   escalier,
-  ESCALIER_TOP_DOOR_Z,
   hammurabi,
   MARLY_BAYS,
   passage,
-  ESCALIER_DOOR_Z,
-  ESCALIER_SOUTH,
+  ESCALIER_DOOR_X,
+  ESCALIER_FOOT_Z,
+  ESCALIER_HEAD_Z,
+  SALON_DOOR_Z,
   PUGET_BAYS,
   salon,
   WALL_T,
@@ -29,7 +29,7 @@ import { corniceRing, sideWall } from './courts';
  * triangles.
  */
 
-/** Passage Richelieu: 14 × 65.5 m, 5 m high, a lit slot down the middle of the soffit. */
+/** Passage Richelieu: 14 × 51.5 m, 5 m high, a lit slot down the middle of the soffit. */
 export function buildPassage(rng: Rng): THREE.Group {
   const g = new THREE.Group();
   const cx = (passage.x0 + passage.x1) / 2;
@@ -45,7 +45,7 @@ export function buildPassage(rng: Rng): THREE.Group {
     const bays = 0.08 * Math.max(0, Math.cos((Math.abs(x - cx) / 3) * Math.PI));
     return 0.52 + 0.38 * across + endGlow + bays + jitter;
   };
-  put(g, plate({ width: w, depth: d, nx: 7, nz: 52, light }), 'floor.stone-flag', [cx, passage.floor, cz]);
+  put(g, plate({ width: w, depth: d, nx: 7, nz: 42, light }), 'floor.stone-flag', [cx, passage.floor, cz]);
 
   // West and east walls: the court arcades.
   sideWall(g, passage, {
@@ -60,13 +60,16 @@ export function buildPassage(rng: Rng): THREE.Group {
     baseY: 0,
     height: 5,
     material: 'wall.ochre-light',
-    openings: [
-      ...PUGET_BAYS.map((at) => ({ at, width: 4.6, head: 4.6, arched: true })),
-      { at: ESCALIER_DOOR_Z, width: 3.6, head: 4.2, arched: true },
-    ],
+    openings: PUGET_BAYS.map((at) => ({ at, width: 4.6, head: 4.6, arched: true })),
   });
-  // North end: the crossing mass closes the passage.
-  sideWall(g, passage, { side: 'n', baseY: 0, height: 5, material: 'wall.ochre-light' });
+  // North end: the stair hall is through this wall.
+  sideWall(g, passage, {
+    side: 'n',
+    baseY: 0,
+    height: 5,
+    material: 'wall.ochre-light',
+    openings: [{ at: ESCALIER_DOOR_X, width: 3.6, head: 4.2, arched: true }],
+  });
   // South mouth: open to the Cour Napoléon link.
   sideWall(g, passage, {
     side: 's',
@@ -79,7 +82,7 @@ export function buildPassage(rng: Rng): THREE.Group {
   // Dress every opening with an arched stone casing.
   for (const at of MARLY_BAYS) put(g, doorway({ width: 4.6, height: 4.6, arched: true, thickness: WALL_T }), 'trim.stone-limestone-warm', [passage.x0, 0, at], Math.PI / 2);
   for (const at of PUGET_BAYS) put(g, doorway({ width: 4.6, height: 4.6, arched: true, thickness: WALL_T }), 'trim.stone-limestone-warm', [passage.x1, 0, at], -Math.PI / 2);
-  put(g, doorway({ width: 3.6, height: 4.2, arched: true, thickness: WALL_T }), 'trim.stone-limestone-warm', [passage.x1, 0, ESCALIER_DOOR_Z], -Math.PI / 2);
+  put(g, doorway({ width: 3.6, height: 4.2, arched: true, thickness: WALL_T }), 'trim.stone-limestone-warm', [ESCALIER_DOOR_X, 0, passage.z0], 0);
   put(g, doorway({ width: 9.4, height: 4.6, arched: true, thickness: WALL_T }), 'trim.stone-limestone-warm', [cx, 0, passage.z1], Math.PI);
 
   // Soffit: two slabs either side of a glazed slot, with cross beams under them.
@@ -95,7 +98,7 @@ export function buildPassage(rng: Rng): THREE.Group {
     [cx - slot / 2 + 0.05, 5.26, cz - d / 2 + 0.1],
     [[0, 0], [slot, 0], [slot, d], [0, d]],
   ), 'app.light-card', [0, 0, 0]);
-  const beams = 16;
+  const beams = 13;
   for (let i = 0; i < beams; i++) {
     const z = passage.z0 + ((i + 0.5) * d) / beams;
     put(g, boxGeo(w - 0.2, 0.26, 0.32), 'trim.stone-limestone-warm', [cx, 5.0 - 0.13, z]);
@@ -183,80 +186,96 @@ export function buildHammurabi(rng: Rng): THREE.Group {
   return g;
 }
 
-/** Escalier Richelieu: a stone flight from the passage up to level 1, with a light well above. */
+/** Escalier Richelieu: the stair hall between the passage below and the salon at level 1. */
 export function buildEscalier(rng: Rng): THREE.Group {
   const g = new THREE.Group();
   const cx = (escalier.x0 + escalier.x1) / 2;
   const cz = (escalier.z0 + escalier.z1) / 2;
   const w = escalier.x1 - escalier.x0;
-  const south = ESCALIER_SOUTH;
-  const d = south - escalier.z0;
+  const d = escalier.z1 - escalier.z0;
   const jitter = rng.range(0, 0.02);
-  const flightW = 10;
-  const flightX = -3;
-  const footZ = -131.5;
-  const headZ = -139.5;
+  const foot = ESCALIER_FOOT_Z;
+  const head = ESCALIER_HEAD_Z;
+  const steps = 24;
+  const run = (foot - head) / steps;
 
-  const light: LightFn = (x, z) => 0.58 + 0.32 * smoothstep(south, escalier.z0, z) * (1 - 0.25 * Math.abs((x - cx) / (w / 2))) + jitter;
-  put(g, plate({ width: w, depth: south - escalier.z0, nx: 13, nz: 7, y: escalier.floor, light }), 'floor.marble-checker', [cx, escalier.floor, (south + escalier.z0) / 2]);
+  const light: LightFn = (x, z) => 0.56 + 0.34 * smoothstep(-122, -141, z) * (1 - 0.22 * Math.abs((x - cx) / (w / 2))) + jitter;
+  put(g, plate({ width: w, depth: d, nx: 8, nz: 10, y: escalier.floor, light }), 'floor.marble-checker', [cx, escalier.floor, cz]);
 
-  sideWall(g, { x0: escalier.x0, x1: escalier.x1, z0: escalier.z0, z1: escalier.z1 }, { side: 'n', baseY: 0, height: 15, material: 'wall.ochre-light' });
-  sideWall(g, { x0: escalier.x0, x1: escalier.x1, z0: south, z1: escalier.z1 }, { side: 's', baseY: 0, height: 15, material: 'wall.ochre-light' });
-  sideWall(g, { x0: escalier.x0, x1: escalier.x1, z0: escalier.z0, z1: south }, { side: 'e', baseY: 0, height: 15, material: 'wall.ochre-light' });
-  sideWall(g, { x0: escalier.x0, x1: escalier.x1, z0: escalier.z0, z1: south }, {
+  sideWall(g, escalier, { side: 'n', baseY: 0, height: escalier.ceil, material: 'wall.ochre-light' });
+  sideWall(g, escalier, { side: 'e', baseY: 0, height: escalier.ceil, material: 'wall.ochre-light' });
+  sideWall(g, escalier, {
+    side: 's',
+    baseY: 0,
+    height: escalier.ceil,
+    material: 'wall.ochre-light',
+    openings: [{ at: ESCALIER_DOOR_X, width: 3.6, head: 4.2, arched: true }],
+  });
+  sideWall(g, escalier, {
     side: 'w',
     baseY: 0,
-    height: 15,
+    height: escalier.ceil,
     material: 'wall.ochre-light',
-    openings: [
-      { at: ESCALIER_DOOR_Z, width: 3.6, head: 4.2, arched: true },
-      { at: ESCALIER_TOP_DOOR_Z, width: 3.2, sill: 6.6, head: 10.6, arched: true },
-    ],
+    openings: [{ at: SALON_DOOR_Z, width: 3.2, sill: salon.floor, head: salon.floor + 3.6, arched: true }],
   });
-  put(g, doorway({ width: 3.6, height: 4.2, arched: true, thickness: WALL_T }), 'trim.stone-limestone-warm', [escalier.x0, 0, ESCALIER_DOOR_Z], Math.PI / 2);
-  put(g, doorway({ width: 3.2, height: 3.8, arched: true, thickness: WALL_T }), 'trim.stone-limestone-warm', [escalier.x0, 6.6, ESCALIER_TOP_DOOR_Z], Math.PI / 2);
+  put(g, doorway({ width: 3.2, height: 3.6, arched: true, thickness: WALL_T }), 'trim.gilt', [escalier.x0, salon.floor, SALON_DOOR_Z], Math.PI / 2);
 
-  // Four shallow risers from the passage door up onto the stair's own landing at y = 1.
+  // Four shallow risers from the passage door up onto the foot of the flight.
   for (let i = 0; i < 4; i++) {
-    put(g, boxGeo(0.4, 0.25, 3.6), 'trim.stone-limestone-warm', [escalier.x0 + 0.2 + 0.4 * (3 - i), 0.125 + 0.25 * i, ESCALIER_DOOR_Z]);
+    put(g, boxGeo(3.6, 0.25, 0.4), 'trim.stone-limestone-warm', [ESCALIER_DOOR_X, 0.125 + 0.25 * i, escalier.z1 - 0.4 - 0.4 * (3 - i)]);
   }
 
-  // The grand flight: 24 treads of 0.25 m rising north from z = -131.5 to z = -139.5.
-  const steps = 24;
-  const run = (footZ - headZ) / steps;
+  // The flight: 24 treads rising north from z = -124 (y = 1) to z = -136 (y = 7).
   for (let i = 0; i < steps; i++) {
-    const tread = boxGeo(flightW, 0.25, run + 0.02);
+    const tread = boxGeo(w, 0.25, run + 0.02);
     tread.translate(0, 0.25 * (i + 0.5), -run * (i + 0.5));
-    put(g, tread, 'trim.stone-limestone-warm', [flightX, escalier.floor, footZ]);
+    put(g, tread, 'marble.blanc-carrare', [cx, escalier.floor, foot]);
+    const nose = boxGeo(w, 0.06, 0.09);
+    nose.translate(0, 0.25 * (i + 1) - 0.03, -run * (i + 1) + 0.03);
+    put(g, nose, 'marble.rouge-royal', [cx, escalier.floor, foot]);
   }
 
-  // Cheek walls and marble balustrades either side of the flight.
-  const angle = Math.atan2(6, footZ - headZ);
+  // Marble balustrades against the side walls, running up with the flight.
+  const angle = Math.atan2(6, foot - head);
+  const runLen = (foot - head) / Math.cos(angle);
   for (const side of [-1, 1]) {
-    const x = flightX + side * (flightW / 2 + 0.4);
-    const cheek = boxGeo(0.8, 1.1, (footZ - headZ) / Math.cos(angle) + 0.4);
-    cheek.rotateX(angle);
-    put(g, cheek, 'trim.stone-limestone-warm', [x, escalier.floor + 3, (footZ + headZ) / 2]);
-    const b = balustrade({ length: (footZ - headZ) / Math.cos(angle), spacing: 1.1, height: 1.0 });
+    const x = cx + side * (w / 2 - 0.3);
+    const b = balustrade({ length: runLen, spacing: 1.1, height: 1.0 });
     b.rotateY(Math.PI / 2);
     b.rotateX(angle);
-    put(g, b, 'marble.blanc-carrare', [x, escalier.floor + 1.1, (footZ + headZ) / 2]);
+    put(g, b, 'marble.blanc-carrare', [x, escalier.floor + 1.05, (foot + head) / 2]);
   }
 
-  // Top landing at level 1, over the head of the flight.
-  put(g, boxGeo(w, 0.6, 1.6), 'trim.stone-limestone-warm', [cx, 6.7, headZ - 0.8]);
-  put(g, balustrade({ length: w - 5, spacing: 1.1, height: 1.0 }), 'marble.blanc-carrare', [cx, 7, headZ + 0.1]);
+  // Level-1 landing at the head of the flight, with the salon door on its west side.
+  put(g, boxGeo(w, 0.5, escalier.z0 - head + 0.05), 'trim.stone-limestone-warm', [cx, 6.75, (escalier.z0 + head) / 2]);
+  put(g, balustrade({ length: w - 4, spacing: 1.1, height: 1.0 }), 'marble.blanc-carrare', [cx, 7, head + 0.15]);
 
-  // Stone vault with an open light well at the crown.
-  put(g, vaultSurface({ width: w - 0.6, span: d - 0.6, rise: 0.9, nx: 12, nz: 9 }), 'ceiling.plaster-white', [cx, 14.1, cz]);
+  // Blind arcade on the north wall, a string course either side, then the vault and its light well.
+  for (const x of [cx - 3.6, cx + 3.6]) {
+    put(g, boxGeo(2.6, 6.4, 0.12), 'wall.stone-cream', [x, 6.4, escalier.z0 + 0.06]);
+    put(g, boxGeo(1.5, 2.6, 0.14), 'wall.slate-green', [x, 7.4, escalier.z0 + 0.1]);
+  }
+  for (const side of [-1, 1]) {
+    const x = cx + side * (w / 2 - 0.1);
+    put(g, boxGeo(0.16, 0.3, d), 'trim.stone-limestone-warm', [x, 4.6, cz]);
+    put(g, boxGeo(0.16, 0.3, d), 'trim.stone-limestone-warm', [x, 11.4, cz]);
+  }
+  put(g, vaultSurface({ width: w - 0.6, span: d - 0.6, rise: 1.1, nx: 8, nz: 9 }), 'ceiling.plaster-white', [cx, escalier.ceil - 1.2, cz]);
+  for (let i = 0; i < 5; i++) {
+    const z = escalier.z0 + 1.5 + i * ((d - 3) / 5);
+    put(g, boxGeo(w - 0.8, 0.26, 0.28), 'trim.stone-limestone-warm', [cx, escalier.ceil - 1.35, z]);
+  }
+  put(g, boxGeo(4.6, 0.22, 0.4), 'trim.stone-limestone-warm', [cx, escalier.ceil - 0.11, cz + 1.8]);
+  put(g, boxGeo(4.6, 0.22, 0.4), 'trim.stone-limestone-warm', [cx, escalier.ceil - 0.11, cz - 1.8]);
+  put(g, boxGeo(0.4, 0.22, 3.2), 'trim.stone-limestone-warm', [cx - 2.1, escalier.ceil - 0.11, cz]);
+  put(g, boxGeo(0.4, 0.22, 3.2), 'trim.stone-limestone-warm', [cx + 2.1, escalier.ceil - 0.11, cz]);
   put(g, quadGeo(
-    [cx - 3.4, 15.0, cz + 2.6],
-    [cx + 3.4, 15.0, cz + 2.6],
-    [cx + 3.4, 15.0, cz - 2.6],
-    [cx - 3.4, 15.0, cz - 2.6],
-    [[0, 0], [6.8, 0], [6.8, 5.2], [0, 5.2]],
+    [cx - 1.9, escalier.ceil - 0.02, cz + 1.6],
+    [cx + 1.9, escalier.ceil - 0.02, cz + 1.6],
+    [cx + 1.9, escalier.ceil - 0.02, cz - 1.6],
+    [cx - 1.9, escalier.ceil - 0.02, cz - 1.6],
+    [[0, 0], [3.8, 0], [3.8, 3.2], [0, 3.2]],
   ), 'app.light-card', [0, 0, 0]);
-  corniceRing(g, { x0: escalier.x0, x1: escalier.x1, z0: escalier.z0, z1: south }, 13.9, 'trim.stone-limestone-warm', 0.4);
   return g;
 }
 
@@ -289,9 +308,9 @@ export function buildSalon(rng: Rng): THREE.Group {
     baseY: floorY,
     height,
     material: 'wall.crimson-silk',
-    openings: [{ at: crossing.z0 + 2.5, width: 3.2, head: 4.2, arched: false }],
+    openings: [{ at: SALON_DOOR_Z, width: 3.2, head: 3.6, arched: true }],
   });
-  put(g, doorway({ width: 3.2, height: 4.2, thickness: WALL_T }), 'trim.gilt', [salon.x1, floorY, crossing.z0 + 2.5], -Math.PI / 2);
+  put(g, doorway({ width: 3.2, height: 3.6, arched: true, thickness: WALL_T }), 'trim.gilt', [salon.x1, floorY, SALON_DOOR_Z], -Math.PI / 2);
 
   // Boiserie: a gilt dado, red silk panels in gilt frames, and a gilt pilaster on every bay line.
   const northAt = (t: number): [number, number, number] => [salon.x0 + t, floorY, salon.z0 + 0.05];
@@ -334,7 +353,7 @@ export function buildSalon(rng: Rng): THREE.Group {
   };
 
   const mirrorT = w / 2;
-  const doorT = crossing.z0 + 2.5 - salon.z0;
+  const doorT = SALON_DOOR_Z - salon.z0;
   furnishWall(w, northAt, 0, (t) => Math.abs(t - mirrorT) < 2.6);
   furnishWall(w, southAt, Math.PI, (t) => Math.abs(t - mirrorT) < 2.6);
   furnishWall(d, westAt, Math.PI / 2, (t) => Math.abs(t - doorT) < 2.2);
