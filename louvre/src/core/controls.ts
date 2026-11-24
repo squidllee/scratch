@@ -12,11 +12,17 @@ export interface SpawnPoint {
   label?: string;
 }
 
+/**
+ * One point on the guided tour. A measured route (route.json) maps onto this directly:
+ * `{ position, lookAt }` plus optional `fov` and `holdMs`.
+ */
 export interface TourWaypoint {
   position: readonly [number, number, number];
   lookAt: readonly [number, number, number];
-  /** Seconds to dwell here before moving on. Defaults 0. */
-  hold?: number;
+  /** Vertical field of view in degrees at this waypoint; interpolated between waypoints. */
+  fov?: number;
+  /** Dwell at this waypoint for this many milliseconds before moving on. Defaults 0. */
+  holdMs?: number;
   label?: string;
 }
 
@@ -98,6 +104,12 @@ export class Controls {
   private eye = new THREE.Vector3();
   private tourCurve: THREE.CatmullRomCurve3 | null = null;
   private lookCurve: THREE.CatmullRomCurve3 | null = null;
+  private waypoints: TourWaypoint[] = [];
+  /** Normalised arc-length position of each waypoint on the spline. */
+  private waypointU: number[] = [];
+  private held = new Set<number>();
+  private holdRemaining = 0;
+  private baseFov = 62;
   private tourLength = 0;
   private tourU = 0;
   private tourSpeed: number;
@@ -113,11 +125,8 @@ export class Controls {
     this.onChange = opts.onChange;
     this.onModeChange = opts.onModeChange;
     this.tourSpeed = opts.tourSpeed ?? 2.6;
-    if (opts.tour.length > 1) {
-      this.tourCurve = new THREE.CatmullRomCurve3(opts.tour.map((w) => new THREE.Vector3(...w.position)), false, 'catmullrom', 0.35);
-      this.lookCurve = new THREE.CatmullRomCurve3(opts.tour.map((w) => new THREE.Vector3(...w.lookAt)), false, 'catmullrom', 0.35);
-      this.tourLength = this.tourCurve.getLength();
-    }
+    this.baseFov = opts.camera.fov;
+    if (opts.tour.length > 1) this.setTour(opts.tour);
     this.setSpawn(opts.spawn);
 
     window.addEventListener('keydown', this.onKeyDown);
@@ -140,12 +149,42 @@ export class Controls {
     this.colliders = colliders;
   }
 
+  /**
+   * Replace the tour path. Integration feeds the measured route here:
+   *   controls.setTour(route.rooms.map(r => ({ position: r.eye, lookAt: r.lookAt, fov: r.fov, holdMs: r.holdMs })))
+   */
   setTour(waypoints: TourWaypoint[]): void {
     if (waypoints.length < 2) return;
+    this.waypoints = waypoints;
     this.tourCurve = new THREE.CatmullRomCurve3(waypoints.map((w) => new THREE.Vector3(...w.position)), false, 'catmullrom', 0.35);
     this.lookCurve = new THREE.CatmullRomCurve3(waypoints.map((w) => new THREE.Vector3(...w.lookAt)), false, 'catmullrom', 0.35);
     this.tourLength = this.tourCurve.getLength();
+    this.waypointU = this.solveWaypointU();
     this.tourU = 0;
+    this.held.clear();
+    this.holdRemaining = 0;
+  }
+
+  /** Where each waypoint sits along the spline, by nearest sample in arc-length space. */
+  private solveWaypointU(): number[] {
+    const curve = this.tourCurve;
+    if (!curve) return [];
+    const samples = 400;
+    const points: THREE.Vector3[] = [];
+    for (let i = 0; i <= samples; i++) points.push(curve.getPointAt(i / samples));
+    return this.waypoints.map((w) => {
+      const target = new THREE.Vector3(...w.position);
+      let best = 0;
+      let bestD = Infinity;
+      points.forEach((p, i) => {
+        const d = p.distanceToSquared(target);
+        if (d < bestD) {
+          bestD = d;
+          best = i;
+        }
+      });
+      return best / samples;
+    });
   }
 
   setSpawn(spawn: SpawnPoint): void {
@@ -301,8 +340,26 @@ export class Controls {
   private updateTour(dt: number): boolean {
     if (!this.tourCurve || !this.lookCurve) return false;
     if (this.paused) return false;
+
+    // A waypoint can ask the camera to dwell before moving on.
+    if (this.holdRemaining > 0) {
+      this.holdRemaining = Math.max(0, this.holdRemaining - dt);
+      this.onChange();
+      return true;
+    }
+
     const du = this.tourLength > 0 ? (this.tourSpeed * dt) / this.tourLength : 0;
+    const before = this.tourU;
     this.tourU = Math.min(1, this.tourU + du);
+    this.applyWaypointFov();
+    this.waypointU.forEach((u, i) => {
+      const holdMs = this.waypoints[i]?.holdMs ?? 0;
+      if (holdMs <= 0 || this.held.has(i)) return;
+      if (before <= u && this.tourU >= u - 1e-6) {
+        this.held.add(i);
+        this.holdRemaining = holdMs / 1000;
+      }
+    });
     this.tourCurve.getPointAt(this.tourU, this.eye);
     this.lookCurve.getPointAt(this.tourU, this.tourLook);
     this.camera.position.copy(this.eye);
@@ -342,8 +399,29 @@ export class Controls {
     return out;
   }
 
+  /** Vertical FOV for the current spline position, interpolated between waypoints. */
+  private applyWaypointFov(): void {
+    const n = this.waypoints.length;
+    if (n === 0) return;
+    let lo = 0;
+    for (let i = 0; i < n; i++) if ((this.waypointU[i] ?? 0) <= this.tourU) lo = i;
+    const hi = Math.min(n - 1, lo + 1);
+    const uLo = this.waypointU[lo] ?? 0;
+    const uHi = this.waypointU[hi] ?? 1;
+    const t = uHi > uLo ? Math.min(1, Math.max(0, (this.tourU - uLo) / (uHi - uLo))) : 0;
+    const fovLo = this.waypoints[lo]?.fov ?? this.baseFov;
+    const fovHi = this.waypoints[hi]?.fov ?? this.baseFov;
+    const fov = fovLo + (fovHi - fovLo) * t;
+    if (Math.abs(this.camera.fov - fov) > 0.01) {
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+
   restartTour(): void {
     this.tourU = 0;
+    this.held.clear();
+    this.holdRemaining = 0;
     this.paused = false;
     this.onModeChange?.(this.mode, this.paused);
     this.onChange();
