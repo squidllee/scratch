@@ -129,8 +129,8 @@ const SPAWNS: SpawnPoint[] = [
   },
   {
     id: 'roofline-above',
-    position: [206, 92, 72],
-    lookAt: [176, 18, 0],
+    position: [40, 60, 20],
+    lookAt: [116, 32, 0],
     label: 'From above: the Cour Carrée ring and its four mansards',
   },
 ];
