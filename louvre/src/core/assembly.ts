@@ -93,8 +93,12 @@ export function auditPortals(rooms: readonly RoomDef[], roomToZone: ReadonlyMap<
       const fromZone = roomToZone.get(room.id) ?? '?';
       const toZone = roomToZone.get(portal.to) ?? '?';
       if (fromZone !== toZone) audit.crossZone.push({ from: room.id, to: portal.to, fromZone, toZone });
+      // Assembly-built connectors (spiral, seam, level link) are one-way by construction: they
+      // only need to describe the opening from their own side, because the walker asks the room it
+      // is standing in. A zone's own door with no mirror is a real fault.
+      const connector = room.id.includes('/');
       const back = (far.portals ?? []).some((p) => p.to === room.id);
-      if (!back) audit.oneWay.push({ from: room.id, to: portal.to });
+      if (!back && !connector) audit.oneWay.push({ from: room.id, to: portal.to });
     }
   }
   return audit;
@@ -213,36 +217,34 @@ function bridgeGap(
   b: RoomDef,
   aId: string,
   bId: string,
+  width = 4,
 ): { room: RoomDef; toFrom: Face; toTo: Face } | null {
   const gapOf = (axis: 0 | 1 | 2): number => {
     const lo = Math.max(a.bounds.min[axis], b.bounds.min[axis]);
     const hi = Math.min(a.bounds.max[axis], b.bounds.max[axis]);
     return lo > hi ? lo - hi : 0;
   };
-  const axes: Array<0 | 2> = [0, 2];
-  const axis = axes.find((x) => gapOf(x) > 0);
-  if (axis === undefined) return null;
+  // The seam is horizontal: the larger of the two plan gaps is the axis to bridge.
+  const axis: 0 | 2 = gapOf(0) >= gapOf(2) ? 0 : 2;
+  if (gapOf(axis) <= 0.01) return null;
   const across = (axis === 0 ? 2 : 0) as 0 | 2;
-  if (gapOf(across) > 0 || gapOf(1) > 0.5) return null;
 
-  const lo = Math.min(a.bounds.max[axis], b.bounds.max[axis]);
-  const hi = Math.max(a.bounds.min[axis], b.bounds.min[axis]);
-  if (hi <= lo) return null;
+  // Where the two rooms come closest: the seam runs between those faces. Rooms that meet at a
+  // corner (the passage and the Daru hall) have no shared extent at all, so the band is centred on
+  // the corner and is as wide as the doorway that was declared there.
+  const nearA = Math.min(Math.max(a.bounds.min[axis], b.bounds.min[axis]), a.bounds.max[axis], b.bounds.max[axis]);
+  const nearB = Math.max(Math.min(a.bounds.max[axis], b.bounds.max[axis]), a.bounds.min[axis], b.bounds.min[axis]);
+  const nearAcrossA = Math.min(Math.max(a.bounds.min[across], b.bounds.min[across]), a.bounds.max[across]);
+  const nearAcrossB = Math.min(Math.max(b.bounds.min[across], a.bounds.min[across]), b.bounds.max[across]);
+  const acrossCentre = (nearAcrossA + nearAcrossB) / 2;
+  const half = Math.max(2, width / 2);
 
-  const tangentLo = Math.max(a.bounds.min[across], b.bounds.min[across]);
-  const tangentHi = Math.min(a.bounds.max[across], b.bounds.max[across]);
-  if (tangentHi - tangentLo < 1) return null;
-
-  const floor = Math.max(a.bounds.min[1], b.bounds.min[1]);
-  const ceiling = Math.min(a.bounds.max[1], b.bounds.max[1]);
-  if (ceiling - floor < 2.2) return null;
-
-  const min: [number, number, number] = [0, floor, 0];
-  const max: [number, number, number] = [0, ceiling, 0];
-  min[axis] = lo;
-  max[axis] = hi;
-  min[across] = tangentLo;
-  max[across] = tangentHi;
+  const min: [number, number, number] = [0, Math.min(a.bounds.min[1], b.bounds.min[1]) - 0.1, 0];
+  const max: [number, number, number] = [0, Math.max(a.bounds.min[1], b.bounds.min[1]) + 2.4, 0];
+  min[axis] = Math.min(nearA, nearB);
+  max[axis] = Math.max(nearA, nearB);
+  min[across] = acrossCentre - half;
+  max[across] = acrossCentre + half;
 
   const seam: RoomDef = { id: 'seam/' + aId + '~' + bId, bounds: { min, max }, portals: [] };
   const toFrom = sharedFace(seam, a);
@@ -361,7 +363,7 @@ export function reconcilePortals(
 
 export interface LevelLink {
   room: string;
-  kind: 'helix' | 'ramp';
+  kind: 'helix' | 'ramp' | 'threshold';
   from: string;
   to: string;
   riseM: number;
@@ -476,17 +478,26 @@ export function rampRoom(
 }
 
 /**
- * Build the walkable connectors between levels: the pyramid's spiral, and a ramp on every declared
- * doorway whose two rooms sit more than a step apart in height.
+ * Build the walkable connectors the wings left out.
+ *
+ * Two kinds. A **threshold** spans a seam: two wings each stopped at their own box edge, so the
+ * doorway between them opens onto a strip of no-room and the walker falls out of the world. That
+ * strip is bridged whatever the heights are, because it is a hole and not a design choice. A
+ * **ramp** spans a level change between two rooms that do touch, and is only built where no stair
+ * of the zones' own already serves the pair.
  */
 export function addLevelLinks(
   rooms: RoomDef[],
   options: { spiral?: { id: string; spec: SpiralSpec; links: [string, string] } } = {},
 ): LevelLink[] {
   const links: LevelLink[] = [];
+  const built = new Set<string>();
+  const pairKey = (a: string, b: string): string => [a, b].sort().join('~');
+
   if (options.spiral) {
     const room = helixRoom(options.spiral.id, options.spiral.spec, options.spiral.links);
     rooms.push(room);
+    built.add(pairKey(options.spiral.links[0], options.spiral.links[1]));
     links.push({
       room: room.id,
       kind: 'helix',
@@ -496,19 +507,88 @@ export function addLevelLinks(
     });
   }
 
-  const built = new Set<string>();
+  // A seam: the two rooms do not touch, and the doorway between them is in the gap.
+  for (const room of [...rooms]) {
+    for (const portal of room.portals ?? []) {
+      const far = rooms.find((r) => r.id === portal.to);
+      if (!far) continue;
+      const key = pairKey(room.id, far.id);
+      if (built.has(key)) continue;
+      const gap = gapBetween(room, far);
+      if (gap <= 0.01 || gap > MAX_SEAM_GAP) continue;
+      const bridged = bridgeGap(room, far, room.id, far.id, Math.max(4, portal.width));
+      if (!bridged) continue;
+      // The threshold carries the level too: its floor is a ramp between the two when they differ.
+      const rise = Math.abs(far.bounds.min[1] - room.bounds.min[1]);
+      if (rise > 1.5) {
+        const lower = room.bounds.min[1] < far.bounds.min[1] ? room : far;
+        const upper = lower === room ? far : room;
+        const axis = (bridged.toFrom.axis === 2 ? 2 : 0) as 0 | 2;
+        const lo = bridged.room.bounds.min[axis];
+        const hi = bridged.room.bounds.max[axis];
+        const down = bridged.toFrom.plane < bridged.toTo.plane;
+        bridged.room.floorAt = (x, z) => {
+          const along = axis === 0 ? x : z;
+          const t = Math.min(1, Math.max(0, (down ? along - lo : hi - along) / Math.max(0.01, hi - lo)));
+          return upper.bounds.min[1] + (lower.bounds.min[1] - upper.bounds.min[1]) * t;
+        };
+        const min = [bridged.room.bounds.min[0], Math.min(room.bounds.min[1], far.bounds.min[1]) - 0.1, bridged.room.bounds.min[2]] as [number, number, number];
+        const max = [bridged.room.bounds.max[0], upper.bounds.min[1] + 2.4, bridged.room.bounds.max[2]] as [number, number, number];
+        bridged.room.bounds = { min, max };
+      } else {
+        const min = [bridged.room.bounds.min[0], Math.min(room.bounds.min[1], far.bounds.min[1]) - 0.1, bridged.room.bounds.min[2]] as [number, number, number];
+        bridged.room.bounds = { min, max: bridged.room.bounds.max };
+      }
+      rooms.push(bridged.room);
+      built.add(key);
+      const faceFrom = bridged.toFrom;
+      const faceTo = bridged.toTo;
+      const push = (from: string, to: string, face: Face): void => {
+        const target = rooms.find((r) => r.id === from);
+        if (!target) return;
+        target.portals = target.portals ?? [];
+        target.portals.push({ to, centre: face.centre, width: face.width, height: face.height, normal: face.normal });
+      };
+      // A doorway declared from one wing into another has no opening to sit in until the seam
+      // exists, so its centre is wherever the zone guessed. Now that the mouth is known, the
+      // declared portal is moved onto it: the walker and the tour both follow portal centres.
+      const rePoint = (owner: RoomDef, target: string, face: Face): void => {
+        const declared = (owner.portals ?? []).find((p) => p.to === target);
+        if (!declared) return;
+        declared.centre = face.centre;
+        declared.width = Math.min(declared.width, face.width + 0.4);
+        declared.height = Math.min(declared.height, face.height);
+      };
+      rePoint(room, far.id, faceFrom);
+      rePoint(far, room.id, faceTo);
+      push(bridged.room.id, room.id, faceFrom);
+      push(bridged.room.id, far.id, faceTo);
+      push(room.id, bridged.room.id, { ...faceFrom, normal: [-faceFrom.normal[0], -faceFrom.normal[1], -faceFrom.normal[2]] });
+      push(far.id, bridged.room.id, { ...faceTo, normal: [-faceTo.normal[0], -faceTo.normal[1], -faceTo.normal[2]] });
+      links.push({
+        room: bridged.room.id,
+        kind: rise > 1.5 ? 'ramp' : 'threshold',
+        from: room.id,
+        to: far.id,
+        riseM: Math.round(rise * 10) / 10,
+      });
+    }
+  }
+
+  // A level change between rooms that do touch, where no stair of the wing's own serves the pair.
   for (const room of [...rooms]) {
     for (const portal of room.portals ?? []) {
       const far = rooms.find((r) => r.id === portal.to);
       if (!far || far.floorAt || room.floorAt) continue;
       const rise = Math.abs(far.bounds.min[1] - room.bounds.min[1]);
       if (rise <= 1.5) continue;
-      const key = [room.id, far.id].sort().join('~');
+      const key = pairKey(room.id, far.id);
       if (built.has(key)) continue;
       const face = sharedFace(room, far);
       if (!face) continue;
-      const id = 'link/' + key;
-      const ramp = rampRoom(id, room.bounds.min[1] < far.bounds.min[1] ? room : far, room.bounds.min[1] < far.bounds.min[1] ? far : room, face, [room.id, far.id]);
+      const lower = room.bounds.min[1] < far.bounds.min[1] ? room : far;
+      const upper = lower === room ? far : room;
+      const ramp = rampRoom('link/' + key, lower, upper, face, [room.id, far.id]);
       if (!ramp) continue;
       built.add(key);
       rooms.push(ramp);

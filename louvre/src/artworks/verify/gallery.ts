@@ -135,17 +135,39 @@ export function buildGallery(): GalleryLayout {
     placements.push({ id: d.id, position: [x, 0, z], rotationY: 0, size: [w, d.sizeCm[1] / 100, (d.depthCm ?? 0) / 100], kind: d.kind });
   }
 
+  // Viewpoints are derived from where the works actually are, and each one is aimed at the centre
+  // of a named work, so the harness's sight-line probe lands on that work's canvas instead of on
+  // bare wall. Aiming by hand is how a capture passes every pixel floor while showing a red wall.
+  const byId = new Map(placements.map((p) => [p.id, p]));
+  const standoff = (id: string, distance: number): { position: [number, number, number]; lookAt: [number, number, number] } => {
+    const p = byId.get(id);
+    if (!p) throw new Error('gallery: no placement for "' + id + '"');
+    const facing = Math.cos(p.rotationY) >= 0 ? 1 : -1;
+    const standing = p.kind === 'sculpture' || p.kind === 'stele' || p.kind === 'object';
+    // A painting is aimed at its canvas centre; a standing work at its mid-height, because aiming at
+    // its base point sends the sight line over the top of it and into the floor beyond.
+    const aimY = standing ? p.position[1] + p.size[1] * 0.45 : p.position[1];
+    const eye = standing ? Math.min(2.4, Math.max(1.5, p.size[1] * 0.5)) : Math.min(2.6, Math.max(1.55, p.position[1]));
+    return {
+      position: [p.position[0], eye, p.position[2] + facing * distance],
+      lookAt: [p.position[0], aimY, p.position[2]],
+    };
+  };
+  const view = (id: string, distance: number, label: string) => ({ id, ...standoff(id, distance), label });
+
   const halfX = HALL_X / 2;
   const halfZ = HALL_Z / 2;
   return {
     group,
     bounds: { min: [-halfX, 0, -halfZ], max: [halfX, HALL_H, halfZ] },
     spawns: [
-      { id: 'overview', position: [0, 2.6, 10.4], lookAt: [0, 3.2, -12], label: 'Whole hall, both walls' },
-      { id: 'paintings-west', position: [-9, 2.0, -6.2], lookAt: [-17.4, 3.4, -13], label: 'The small panels, west end' },
-      { id: 'paintings-east', position: [8, 2.4, -5.6], lookAt: [17.4, 4.6, -13], label: 'The large machines, east end' },
-      { id: 'sculptures', position: [0.5, 1.8, 9.6], lookAt: [-6, 1.7, 3.6], label: 'The sculpture line' },
-      { id: 'south-wall', position: [7, 2.2, 6.4], lookAt: [19, 4.4, 13], label: 'South wall, ceiling panel' },
+      view('mona-lisa', 2.4, 'Mona Lisa, at the Louvre\'s 2.4 m sight line'),
+      view('wedding-at-cana', 12, 'The Wedding at Cana, full width'),
+      view('raft-of-the-medusa', 12, 'The Raft of the Medusa'),
+      view('apollo-ceiling-delacroix', 14, 'The Apollo ceiling panel'),
+      view('venus-de-milo', 4, 'Venus de Milo'),
+      view('winged-victory', 7, 'The Winged Victory on her prow'),
+      { id: 'hall-axis', position: [-16.5, 2.2, 8.5], lookAt: [8, 3.0, -12.5], label: 'Down the hall, both walls' },
     ],
     placements,
   };
