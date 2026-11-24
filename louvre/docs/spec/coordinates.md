@@ -114,6 +114,7 @@ The interior zones build their walls from inside; the exterior zone builds from 
 5. that no two rooms on the same level in the same zone share plan area;
 6. that each room's declared area agrees with its footprint within 9%;
 7. that every artwork's room exists and lists it, and that no painting is wider than its wall or taller than its ceiling allows;
-8. that every palette key a room names exists in `palette.json`.
+8. that every palette key a room names exists in `palette.json`;
+9. **that every portal sits on a real wall** — two rooms must share a boundary segment (within one metre, for wall thickness), or, for a vertical link only, overlap in plan on different floors. A portal to nowhere fails the run. This is the check that would have caught `galerie-apollon`↔`pavillon-horloge` and `salle-des-caryatides`↔`salle-grec-346` before the Sully zone found them against the geometry.
 
 A clean run is part of the spec being usable: if you change a footprint, run it.

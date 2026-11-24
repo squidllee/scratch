@@ -184,19 +184,19 @@
       "footprint": {
         "x": [
           30.0,
-          62.0
+          82.0
         ],
         "z": [
-          21.0,
+          0.0,
           70.5
         ]
       },
       "dimensions": {
-        "length_m": 49.5,
-        "width_m": 32.0,
-        "area_m2": 1584,
+        "length_m": 52.0,
+        "width_m": 70.5,
+        "area_m2": 3666,
         "basis": "estimated",
-        "source": "Reconstructed undercroft. The real link from the Hall Napoleon to the Daru staircase runs under the Cour Napoleon and rises; we model it as one flat gallery with a ramp in its last 10 m."
+        "source": "Reconstructed undercroft under the Cour Napoleon's southern half. It spans from the Hall Napoleon's east wall (x = 30) to the Daru staircase's south face (z = 70.5) so that both doors sit on shared walls rather than on a corner."
       },
       "ceiling": {
         "type": "flat",
@@ -293,16 +293,16 @@
           82.0
         ],
         "z": [
-          74.0,
+          70.5,
           96.0
         ]
       },
       "dimensions": {
-        "length_m": 22.0,
+        "length_m": 25.5,
         "width_m": 20.0,
-        "area_m2": 440,
+        "area_m2": 510,
         "basis": "estimated",
-        "source": "No published survey. Sized so that the 5.57 m Samothrace monument sits at the top of three flights with 5 m of clearance above it and 8 m of open landing around it."
+        "source": "No published survey. Its south face starts on the Denon wing's own building line (z = 70.5) so that the undercroft arrives at a wall rather than a corner; sized so the 5.57 m Samothrace monument sits at the head of three flights with 5 m of clearance above it and 8 m of open landing around it."
       },
       "ceiling": {
         "type": "coffered",
@@ -757,7 +757,7 @@
         1
       ],
       "floorY": 7.0,
-      "clearHeight_m": 15.0,
+      "clearHeight_m": 13.85,
       "footprint": {
         "x": [
           116.0,
@@ -777,8 +777,9 @@
       },
       "ceiling": {
         "type": "vault",
-        "height_m": 15.0,
-        "notes": "Domed, painted; gilt ribs."
+        "height_m": 13.85,
+        "notes": "Barrel vault entirely gilded, with Delacroix's Apollo Slays Python in the central panel and Le Brun's Hours around it; gilded stucco reliefs on the coves. The vault crown sits at y = 20.85 m, which is 13.85 m above this floor. The Louvre also publishes a 15 m ceiling; the two figures cannot both be measured from the same floor, and the crown is the one that must not be breached, so it is the one we hold.",
+        "vaultCrown_m": 20.85
       },
       "floorMaterial": "floor.marble-checker",
       "wallColour": "wall.apollon-blue",
@@ -807,7 +808,7 @@
         1
       ],
       "floorY": 7.0,
-      "clearHeight_m": 15.0,
+      "clearHeight_m": 13.85,
       "footprint": {
         "x": [
           116.0,
@@ -827,8 +828,9 @@
       },
       "ceiling": {
         "type": "vault",
-        "height_m": 15.0,
-        "notes": "Barrel vault entirely gilded, with Delacroix's Apollo Slays Python in the central panel and Le Brun's Hours around it; gilded stucco reliefs of the seasons and signs of the zodiac on the coves."
+        "height_m": 13.85,
+        "notes": "Barrel vault entirely gilded, with Delacroix's Apollo Slays Python in the central panel and Le Brun's Hours around it; gilded stucco reliefs on the coves. The vault crown sits at y = 20.85 m, which is 13.85 m above this floor. The Louvre also publishes a 15 m ceiling; the two figures cannot both be measured from the same floor, and the crown is the one that must not be breached, so it is the one we hold.",
+        "vaultCrown_m": 20.85
       },
       "floorMaterial": "floor.marble-checker",
       "wallColour": "wall.apollon-blue",
@@ -844,8 +846,8 @@
           "kind": "arch"
         },
         {
-          "to": "pavillon-horloge",
-          "kind": "door"
+          "to": "rotonde-de-mars",
+          "kind": "stair"
         }
       ]
     },
@@ -901,10 +903,6 @@
         },
         {
           "to": "escalier-henri-ii",
-          "kind": "door"
-        },
-        {
-          "to": "galerie-apollon",
           "kind": "door"
         },
         {
@@ -1014,6 +1012,62 @@
           "kind": "door"
         },
         {
+          "to": "rotonde-de-mars",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "rotonde-de-mars",
+      "name": "Rotonde de Mars (threshold to the Petite Galerie)",
+      "nameFr": "Rotonde de Mars",
+      "louvreRoom": null,
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        0,
+        1
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 12.0,
+      "footprint": {
+        "x": [
+          116.0,
+          139.75
+        ],
+        "z": [
+          55.0,
+          80.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 25.0,
+        "width_m": 23.75,
+        "area_m2": 594,
+        "basis": "estimated",
+        "source": "Real wing volume at the south-west corner of the ring, measured only through the 23.75 m wing depth and the 160 / 112.5 m square. The rotunda itself exists; its use here as the sole threshold between the Caryatides, room 346 and the Galerie d'Apollon is our reconstruction, and it holds the only stair from the ground floor up to the Petite Galerie's 7 m gallery floor."
+      },
+      "ceiling": {
+        "type": "vault",
+        "height_m": 12.0,
+        "notes": "Domed in reality. Modelled as a shallow stone dome over a half-landing, with the stair to level 1 rising in its south half."
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.stone-grey",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Lit only from the gallery door above and the two ground-floor doors, so it is the darkest room in the ring. Its job is to make the turn from the Renaissance rooms up to the gold of the Petite Galerie feel like a climb.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "galerie-apollon",
+          "kind": "stair",
+          "note": "up 7 m at the south end"
+        },
+        {
+          "to": "salle-des-caryatides",
+          "kind": "door"
+        },
+        {
           "to": "salle-grec-346",
           "kind": "door"
         }
@@ -1060,11 +1114,11 @@
       "artworks": [],
       "portals": [
         {
-          "to": "salle-des-caryatides",
+          "to": "salle-venus-milo",
           "kind": "door"
         },
         {
-          "to": "salle-venus-milo",
+          "to": "rotonde-de-mars",
           "kind": "door"
         }
       ]
@@ -1631,15 +1685,14 @@
       "wing": "richelieu",
       "zone": "richelieu-interior",
       "levels": [
-        0,
         1
       ],
-      "floorY": 1.0,
-      "clearHeight_m": 14.0,
+      "floorY": 7.0,
+      "clearHeight_m": 10.0,
       "footprint": {
         "x": [
-          -16.0,
-          10.0
+          -30.0,
+          -16.0
         ],
         "z": [
           -141.0,
@@ -1647,16 +1700,16 @@
         ]
       },
       "dimensions": {
-        "length_m": 26.0,
-        "width_m": 19.0,
-        "area_m2": 494,
+        "length_m": 19.0,
+        "width_m": 14.0,
+        "area_m2": 266,
         "basis": "invented",
-        "source": "The Richelieu wing's grand stair; its exact plan and level numbering are ours. floorY 1.0 is a half-landing above the courts."
+        "source": "The Richelieu wing's stair, modelled as a flight rising over the north end of the Passage Richelieu, which is how such stairs sit in this building. Its plan and its level numbering are ours."
       },
       "ceiling": {
         "type": "vault",
-        "height_m": 14.0,
-        "notes": "Stone vault with an open well."
+        "height_m": 10.0,
+        "notes": "Stone vault with an open well, over the passage below."
       },
       "floorMaterial": "floor.marble-checker",
       "wallColour": "wall.ochre-light",
@@ -1788,87 +1841,92 @@
       "note": "61 m of gold; the crown jewels in wall cases on the left."
     },
     {
-      "n": 14,
-      "room": "pavillon-horloge",
-      "note": "Out through the clock pavilion to the Cour Carree."
+      "room": "rotonde-de-mars",
+      "note": "Down the corner stair to the ground floor: the only way out of the Petite Galerie. Dark stone after all that gold.",
+      "n": 14
     },
     {
       "n": 15,
+      "room": "pavillon-horloge",
+      "note": "Out through the clock pavilion to the Cour Carree, having come back along the Caryatides."
+    },
+    {
+      "n": 16,
       "room": "cour-carree",
       "note": "Cross the court toward Perrault's colonnade, then return."
     },
     {
-      "n": 16,
+      "n": 17,
       "room": "salle-perrault",
       "note": "Behind the coupled columns."
     },
     {
-      "n": 17,
+      "n": 18,
       "room": "escalier-henri-ii",
       "note": "Down into the Renaissance wing."
     },
     {
-      "n": 18,
+      "n": 19,
       "room": "salle-des-caryatides",
       "note": "Diana of Versailles and the Borghese Gladiator among Roman marbles."
     },
     {
-      "n": 19,
+      "n": 20,
       "room": "salle-grec-346",
       "note": "South wing, Greek classical."
     },
     {
-      "n": 20,
+      "n": 21,
       "room": "salle-venus-milo",
       "note": "The Venus stands free, in the middle of the room."
     },
     {
-      "n": 21,
+      "n": 22,
       "room": "sphinx-crypt",
       "note": "Optional spur: the pink granite sphinx in near darkness."
     },
     {
-      "n": 22,
+      "n": 23,
       "room": "pavillon-horloge",
-      "note": "Retrace to the courtyard."
+      "note": "Out through the clock pavilion to the Cour Carree, having come back along the Caryatides."
     },
     {
-      "n": 23,
+      "n": 24,
       "room": "passage-richelieu-link",
       "note": "Down and north under the Cour Napoleon."
     },
     {
-      "n": 24,
+      "n": 25,
       "room": "passage-richelieu",
       "note": "Between the two sculpture courts."
     },
     {
-      "n": 25,
+      "n": 26,
       "room": "cour-marly",
       "note": "The Marly Horses on the top terrace under the glass vault."
     },
     {
-      "n": 26,
+      "n": 27,
       "room": "cour-puget",
       "note": "Down one terrace; Milo of Croton."
     },
     {
-      "n": 27,
+      "n": 28,
       "room": "cour-khorsabad",
       "note": "The lamassu in the third court."
     },
     {
-      "n": 28,
+      "n": 29,
       "room": "salle-hammurabi",
       "note": "The stele, spotlit."
     },
     {
-      "n": 29,
+      "n": 30,
       "room": "escalier-richelieu",
       "note": "Up behind the north range."
     },
     {
-      "n": 30,
+      "n": 31,
       "room": "napoleon-iii-grand-salon",
       "note": "End in crimson and gold under a chandelier."
     }

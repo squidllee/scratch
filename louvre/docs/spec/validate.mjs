@@ -72,7 +72,40 @@ for (const r of route.rooms) {
   }
 }
 
-// ---- 4. reachability from the entrance -----------------------------------
+// ---- 4. every portal touches a real wall (planarity) --------------------
+// A portal between two rooms must either share a boundary segment (within wall thickness)
+// or, for a vertical link, overlap in plan on different floors. This is the check that would
+// have caught galerie-apollon/pavillon-horloge and caryatides/grec-346 before a zone thread hit them.
+const TOL = 1.0;
+const WALL_MIN = 0.5;
+const planOverlap = (A, B) => {
+  const dx = ov(A.footprint.x[0], A.footprint.x[1], B.footprint.x[0], B.footprint.x[1]);
+  const dz = ov(A.footprint.z[0], A.footprint.z[1], B.footprint.z[0], B.footprint.z[1]);
+  return { dx, dz };
+};
+const shareWall = (A, B) => {
+  const { dx, dz } = planOverlap(A, B);
+  const [ax0, ax1] = A.footprint.x, [bx0, bx1] = B.footprint.x;
+  const [az0, az1] = A.footprint.z, [bz0, bz1] = B.footprint.z;
+  if ((Math.abs(ax1 - bx0) <= TOL || Math.abs(bx1 - ax0) <= TOL) && dz >= WALL_MIN) return true;
+  if ((Math.abs(az1 - bz0) <= TOL || Math.abs(bz1 - az0) <= TOL) && dx >= WALL_MIN) return true;
+  return false;
+};
+for (const r of route.rooms) {
+  for (const p of r.portals) {
+    const o = byId.get(p.to);
+    if (!o || o.id < r.id) continue; // report each pair once
+    const { dx, dz } = planOverlap(r, o);
+    const stacked = dx > 0.01 && dz > 0.01;
+    const differentFloor = Math.abs(r.floorY - o.floorY) > 0.5;
+    if (stacked && !differentFloor)
+      fail(`portal has no wall: ${r.id} / ${o.id} overlap in plan on the same floor`);
+    else if (!stacked && !shareWall(r, o))
+      fail(`portal to nowhere: ${r.id} / ${o.id} share no wall (gap over ${TOL} m or overlap under ${WALL_MIN} m)`);
+  }
+}
+
+// ---- 5. reachability from the entrance -----------------------------------
 const adj = new Map(route.rooms.map((r) => [r.id, r.portals.map((p) => p.to)]));
 const seen = new Set(["cour-napoleon"]);
 const q = ["cour-napoleon"];
@@ -82,7 +115,7 @@ while (q.length) {
 }
 for (const r of route.rooms) if (!seen.has(r.id)) fail(`room unreachable from the entrance: ${r.id}`);
 
-// ---- 5. no two rooms share plan area at the same level in the same zone --
+// ---- 6. no two rooms share plan area at the same level in the same zone --
 const levelsOf = (r) => new Set(r.levels);
 for (let i = 0; i < route.rooms.length; i++)
   for (let j = i + 1; j < route.rooms.length; j++) {
@@ -96,7 +129,7 @@ for (let i = 0; i < route.rooms.length; i++)
       fail(`rooms overlap at level ${shared.join(",")}: ${A.id} / ${B.id} (${dx.toFixed(2)} x ${dz.toFixed(2)} m)`);
   }
 
-// ---- 6. footprints agree with dimensions --------------------------------
+// ---- 7. footprints agree with dimensions --------------------------------
 for (const r of route.rooms) {
   const w = r.footprint.x[1] - r.footprint.x[0];
   const d = r.footprint.z[1] - r.footprint.z[0];
@@ -105,7 +138,7 @@ for (const r of route.rooms) {
     fail(`${r.id}: declared area ${r.dimensions.area_m2} vs footprint ${area.toFixed(0)} m2`);
 }
 
-// ---- 7. artworks: room resolves, fits the wall, palette keys resolve ----
+// ---- 8. artworks: room resolves, fits the wall, palette keys resolve ----
 const roomArt = new Map(route.rooms.map((r) => [r.id, new Set(r.artworks)]));
 for (const a of artworks.artworks) {
   const r = byId.get(a.room);
@@ -128,7 +161,7 @@ for (const r of route.rooms)
     if (!artworks.artworks.some((a) => a.id === id))
       fail(`${r.id} lists artwork ${id}, absent from artworks.json`);
 
-// ---- 8. palette keys used by rooms exist ---------------------------------
+// ---- 9. palette keys used by rooms exist ---------------------------------
 const palKeys = new Set();
 for (const group of ["wall", "floor", "ceiling", "trim", "stone", "gold", "glass", "wood", "marble", "context"])
   for (const k of Object.keys(palette[group] ?? {})) palKeys.add(`${group}.${k}`);
@@ -139,7 +172,7 @@ for (const r of route.rooms) {
   }
 }
 
-// ---- 9. painted-wall sanity: no painting wider than its room wall --------
+// ---- 10. painted-wall sanity: no painting wider than its room wall --------
 const big = artworks.artworks.filter((a) => a.dims_cm.width >= 500).map((a) => `${a.id} ${a.dims_cm.width}x${a.dims_cm.height}`);
 warn(`works over 5 m wide (check sight lines): ${big.join(", ")}`);
 

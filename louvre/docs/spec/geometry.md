@@ -137,6 +137,7 @@ The Arc is on the Place du Carrousel, west of the Cour Napoléon proper. It is a
 | Grande Galerie storey | first floor (level 1), with a glazed roof | measured | Wikipedia |
 | Salon Carré | at the east end; its location defines the 288 m | measured | wikipedia |
 | Petite Galerie (Galerie d'Apollon) | **61 m long, 15 m ceiling** | measured | Louvre press office: 61.34 m, ceiling 15 m |
+| Galerie d'Apollon, vault crown | **20.85 m above the courtyard** | measured | The Louvre publishes both a 15 m ceiling and a 20.85 m crown; measured from the same floor they cannot both be right, because the gallery floor is at y = 7. We hold the crown as absolute — it is the highest point of the Petite Galerie and the hard constraint — and that gives 13.85 m of clear height. An 8 m central canvas hung from a 22 m crown would breach the Sully zone box at 20.4 m |
 | Denon wing depth, Cour Napoléon to Seine | **83.5 m** | derived | Our plan: the Cour Napoléon's south front at z = +70.5, the Seine façade at z = +154. Cross-check: the Cour Carrée's south face at z = +80 to the Grande Galerie's north face at z = +141 is 61 m, which is the Petite Galerie's measured 61.34 m. That depth is what forces two internal courtyards into the wing |
 | Salle des États floor area | **698 m²** | measured | Louvre press, 2019 reopening |
 | Salle des États | 40 m long (widely quoted) → 17.4 m wide | measured / derived | 698 / 40 |
@@ -215,3 +216,16 @@ None of these are measured. They are read off façades in photographs and cross-
 **Estimated.** Every storey height (back-solved, not surveyed), every bay width, every room footprint in `route.json` that is not marked measured, the Cour Puget and Cour Khorsabad floor rectangles, the Hall Napoléon's 60 × 42 split, all door heights and cornice profiles.
 
 **Not found.** A published survey drawing of the palace at 1:200; individual room areas for anything other than the Salle des États, the Salle des Caryatides, the Galerie d'Apollon, the Cour Marly roof and the Hall Napoléon; the exact height of any interior ceiling; the number of bays on any façade; the depth of the Denon and Richelieu wings as surveyed.
+
+
+---
+
+## 11. Which figures are the museum's and which are ours
+
+Zone threads now quote these numbers to the person, so the line matters. Split it this way.
+
+**The museum's own published figures.** Citable as "the Louvre says": the pyramid at 21 m high and 35 m square (louvre.fr) or 21.64 × 35.42 m (Structurae, Wikipedia FR); 673 panes, 603 rhombi and 70 triangles; the Cour Napoléon at 28,000 m² with 650,000 setts; 244,000 m² of floor, 3,000 m of façade, 70,000 m² of gallery, 403 rooms, 14.5 km of galleries and corridors; the Salle des États at 698 m²; the Galerie d'Apollon at 61.34 m with a 15 m ceiling and a 20.85 m vault crown; the Cour Marly glazed roof at 57.05 × 42.61 m with 6,500 m² over the three courts; the Grande Galerie at 288 × 13 m as a museum room; Perrault's Colonnade at 183 m; the Cour Carrée as a 160 m square; the Arc du Carrousel at 19 × 23 × 7.3 m; the inverted pyramid at 16 × 7 m. These are the numbers to say out loud.
+
+**Ours, and not to be attributed to the museum.** Every storey height (6.90 / 6.70 / 6.80 m, back-solved to land on the one cornice height we do have); the 28.7 m ridge; every bay width and bay count; every room footprint in `route.json` that is not tagged measured; the 200 × 140 m split of the Cour Napoléon; the Cour Marly and Cour Puget floor rectangles; the 116.25 m pyramid-to-Cour-Carrée distance; every door height, cornice profile and plinth dimension in the interior spec.
+
+**Measured once, assumed elsewhere.** The 20.4 m cornice is measured on the Aile Lescot. Applying it to the other three wings of the Cour Carrée and to the Denon and Richelieu ranges is our assumption, and it is the single assumption that most of the vertical model rests on.
