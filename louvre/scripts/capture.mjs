@@ -60,6 +60,7 @@ const extraQuery = flag('query', '');
 const verify = Boolean(flag('verify', false));
 const runProbe = Boolean(flag('probe', false));
 const expectMaterial = flag('expect-material');
+const useEnv = Boolean(flag('env', false));
 const bboxTolerance = Number(flag('bbox-tolerance', 3));
 
 /** Pixel verdict floors. Calibrated on the proof gallery: mean 78-85, std 38-42, ~25k colours. */
@@ -132,13 +133,19 @@ async function findSpec() {
     const root = resolve(String(dir));
     try {
       const route = JSON.parse(await readFile(join(root, 'route.json'), 'utf8'));
+      let coordinates = null;
+      try {
+        coordinates = await readFile(join(root, 'coordinates.md'), 'utf8');
+      } catch {
+        coordinates = null;
+      }
       let artworks = null;
       try {
         artworks = JSON.parse(await readFile(join(root, 'artworks.json'), 'utf8'));
       } catch {
         artworks = null;
       }
-      return { root, route, artworks };
+      return { root, route, artworks, coordinates };
     } catch {
       continue;
     }
@@ -202,7 +209,7 @@ async function main() {
     shots.push({ file, stats, pixels });
     console.log(
       'captured ' + file + '  draws=' + stats.drawCalls + ' tris=' + stats.triangles +
-      ' texMB=' + stats.textureMB + '  mean=' + pixels.mean + ' std=' + pixels.std +
+      ' texMB=' + stats.textureMB + '  mean=' + pixels.mean + ' centre=' + pixels.centreMean + ' std=' + pixels.std +
       ' colours=' + pixels.uniqueColours,
     );
     if (pixels.std < PIXEL_FLOOR.std) {
@@ -216,7 +223,8 @@ async function main() {
     return stats;
   };
 
-  const queryBase = 'zone=' + encodeURIComponent(zone) + (extraQuery ? '&' + extraQuery : '');
+  const queryBase =
+    'zone=' + encodeURIComponent(zone) + (useEnv ? '&env=1' : '') + (extraQuery ? '&' + extraQuery : '');
 
   if (captureAll) {
     const spawns = await (async () => {
@@ -274,6 +282,16 @@ async function main() {
   console.log('floor probe: ' + JSON.stringify(floorProbe));
   if (Math.abs(floorProbe.rampAtStart) > 1e-6 || Math.abs(floorProbe.rampAtEnd - 3) > 1e-6 || Math.abs(floorProbe.flat - 3) > 1e-6) {
     failures.push({ check: 'floor', value: floorProbe, message: 'room floorAt() is not what the walker reads' });
+  }
+  // Rooms stacked over one point (courtyard over hall over undercroft): the walker must stand on the
+  // floor it is on, not the first room that matches.
+  if (Math.abs(floorProbe.stackOnCourtyard) > 1e-6 || Math.abs(floorProbe.stackOnHall + 9) > 1e-6 || Math.abs(floorProbe.stackOnUndercroft + 18) > 1e-6) {
+    failures.push({ check: 'floor-stack', value: floorProbe, message: 'stacked rooms resolve to the wrong floor; the undercroft is unreachable' });
+  }
+  const expectedBands = [0, 0, -9, -9, -9];
+  if (JSON.stringify(floorProbe.stairBands) !== JSON.stringify(expectedBands)) {
+    failures.push({ check: 'floor-stack', value: floorProbe.stairBands, expected: expectedBands,
+      message: 'descending eye heights do not hand over to the room below' });
   }
 
   if (runProbe || verify) {
@@ -380,6 +398,51 @@ async function main() {
     return result;
   }
 
+  /**
+   * The zone box from coordinates.md §3, which is the authority: the rooms are its contents, and a
+   * room like the Cour Napoléon is open sky with no ceiling to derive a y-max from.
+   */
+  function parseZoneTable(markdown, specZone) {
+    if (!markdown) return null;
+    const box = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
+    let found = false;
+    const num = (cell) => {
+      const parts = String(cell).replace(/[*_`]/g, '').replace(/\u2212/g, '-').split('…');
+      if (parts.length !== 2) return null;
+      const lo = Number(parts[0].replace(/[^\d.+-]/g, ''));
+      const hi = Number(parts[1].replace(/[^\d.+-]/g, ''));
+      return Number.isFinite(lo) && Number.isFinite(hi) ? [lo, hi] : null;
+    };
+    let block = false;
+    for (const line of markdown.split('\n')) {
+      const isRow = line.trim().startsWith('|');
+      // Only the first contiguous table that names the zone is authoritative; later tables are
+      // wider (they reach the ridge at 28.7 m) and would make the check permissive.
+      if (!isRow) {
+        if (found) break;
+        continue;
+      }
+      const cells = line.split('|').map((c) => c.trim());
+      if (cells.length < 6) continue;
+      if (!cells.some((c) => c.replace(/[`*]/g, '').startsWith(specZone))) {
+        if (block) break;
+        continue;
+      }
+      block = true;
+      // Two tables name the zones with different column orders, so take the first three cells that
+      // read as ranges in those units: x, then y, then z.
+      const ranges = cells.map(num).filter(Boolean);
+      if (ranges.length < 3) continue;
+      const x = ranges[0];
+      const y = ranges[1];
+      const z = ranges[2];
+      found = true;
+      box.min = [Math.min(box.min[0], x[0]), Math.min(box.min[1], y[0]), Math.min(box.min[2], z[0])];
+      box.max = [Math.max(box.max[0], x[1]), Math.max(box.max[1], y[1]), Math.max(box.max[2], z[1])];
+    }
+    return found ? box : null;
+  }
+
   /** Structural asserts against the measured spec. */
   async function verifyStructure(scene) {
     const specZone = SPEC_ZONE[zone];
@@ -403,15 +466,19 @@ async function main() {
       });
     }
 
-    const specMin = [Infinity, Infinity, Infinity];
-    const specMax = [-Infinity, -Infinity, -Infinity];
+    const tableBox = parseZoneTable(spec.coordinates, specZone);
+    const boxBasis = tableBox ? 'coordinates.md zone table' : 'route.json room extents';
+    const specMin = tableBox ? [...tableBox.min] : [Infinity, Infinity, Infinity];
+    const specMax = tableBox ? [...tableBox.max] : [-Infinity, -Infinity, -Infinity];
     for (const r of rooms) {
+      if (tableBox) break;
       specMin[0] = Math.min(specMin[0], r.footprint.x[0]);
       specMin[2] = Math.min(specMin[2], r.footprint.z[0]);
       specMax[0] = Math.max(specMax[0], r.footprint.x[1]);
       specMax[2] = Math.max(specMax[2], r.footprint.z[1]);
       specMin[1] = Math.min(specMin[1], r.floorY);
-      specMax[1] = Math.max(specMax[1], r.floorY + r.clearHeight_m);
+      const clear = typeof r.clearHeight_m === 'number' ? r.clearHeight_m : 0;
+      specMax[1] = Math.max(specMax[1], r.floorY + clear);
     }
     let boundsOk = null;
     if (scene.bounds) {
@@ -423,7 +490,7 @@ async function main() {
       if (!boundsOk) {
         failures.push({
           check: 'bounds', value: b,
-          expected: { min: specMin, max: specMax }, tolerance: bboxTolerance,
+          expected: { min: specMin, max: specMax }, basis: boxBasis, tolerance: bboxTolerance,
           message: 'zone geometry leaves the box coordinates.md assigns to ' + specZone +
             ' (min ' + specMin.map((n) => Math.round(n)).join(',') + ' / max ' + specMax.map((n) => Math.round(n)).join(',') + ')',
         });
@@ -445,6 +512,7 @@ async function main() {
       checked: true,
       specRoot: spec.root,
       specZone,
+      boxBasis,
       roomsExpected: rooms.length,
       roomsDeclared: scene.rooms.length,
       missingRooms,

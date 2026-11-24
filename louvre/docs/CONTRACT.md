@@ -178,7 +178,11 @@ const rooms: RoomDef[] = [
 - Where a wall is thick, add a thin **threshold room** spanning the opening (`bounds` across the
   wall, `width` = the doorway) with portals on both sides. That is how collision keeps a wall solid
   while letting you walk through the door. See `threshold-east` in `src/zones/_example/`.
-- **Floors and stairs.** `bounds.min[1]` is the walking surface of a flat room. For stairs, a ramp,
+- **Floors and stairs.** Several rooms can contain the same (x, z): the Cour Napoléon pavement
+  sits above the Hall Napoléon, which sits above the undercrofts. The walker stands on the
+  highest floor at or below the eye, so stacked rooms resolve by height rather than by declaration
+  order, and a descending stair hands over to the room below once the eye drops past the floor
+  above. `bounds.min[1]` is the walking surface of a flat room. For stairs, a ramp,
   or a stepped dais, give that room a `floorAt(x, z)` function returning the height at that point;
   the walker calls it every frame and puts the eye at `height + 1.65 m`, so the camera climbs with
   you. **Vertical movement is never a zone's job** — a zone that moves the camera in `update()`
@@ -338,9 +342,12 @@ when:
 - any console error is logged;
 - **structural asserts against the spec** (`route.json`, `artworks.json` from `docs/spec/`, or pass
   `--spec <dir>` to point at the captain drive copy): every room `route.json` gives this zone must
-  exist in `zone.rooms`; the zone's geometry bounds must sit inside the box `coordinates.md` assigns
-  it (tolerance `--bbox-tolerance`, default 3 m); and every artwork `artworks.json` assigns to those
-  rooms must be in the scene graph (name it through `placeArtwork`, which tags `userData.artworkId`).
+  exist in `zone.rooms`; the zone's geometry bounds must sit inside the box `coordinates.md` §3
+  assigns it — the zone table is the authority, not the room extents, because `cour-napoleon` is
+  open sky with no ceiling to derive a y-max from (tolerance `--bbox-tolerance`, default 3 m; the
+  report names the basis in `structureCheck.boxBasis`); and every artwork `artworks.json` assigns to
+  those rooms must be in the scene graph (name it through `placeArtwork`, which tags
+  `userData.artworkId`).
 
 Instance check: `--verify` fails if any instance sits outside where the zone says it is. The basis
 depends on the zone, and the report records which one was used (`instanceCheck.basis`):

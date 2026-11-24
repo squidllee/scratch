@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { boxGeo, mergeAll, type ProfilePoint } from '../../core/geom';
 import { mergeByMaterial, addParts, addPart } from '../../core/merge';
-import { mat } from '../../core/materials';
+import { goldMat } from '../../core/materials';
 import {
   arcade,
   baseboard,
@@ -203,6 +203,13 @@ function buildGallery(ctx: ZoneContext): ExampleParts {
     const frame = pictureFrame({ width: 2.4, height: 1.62, canvas: true });
     const fg = new THREE.Group();
     addParts(fg, frame);
+    // Gilt reads as coal at the palette's physically-correct metalness under ambient-only light.
+    fg.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && (mesh.material as THREE.MeshStandardMaterial).name === 'wood.gilt-frame') {
+        mesh.material = goldMat('wood.gilt-frame');
+      }
+    });
     fg.position.set(x, 4.6, -D / 2 + 0.02);
     raw.add(fg);
   }

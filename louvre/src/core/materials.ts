@@ -165,6 +165,24 @@ export function mat(name: MaterialName, override: Partial<MaterialSpec> = {}): T
  */
 export const OUTDOOR_METAL: Partial<MaterialSpec> = { metalness: 0.08, roughness: 0.62 };
 
+/**
+ * Gilt for indoor lighting with no environment map.
+ *
+ * The palette's gold is metalness 0.85-0.9, which is physically right and renders as coal here: a
+ * metal has almost no diffuse response, and with only hemisphere and directional lights there is
+ * nothing for it to reflect. Dropping the metalness restores the diffuse response that carries the
+ * colour, which is what a viewer reads as gilt under museum light.
+ *
+ *   goldMat('gold.leaf')            // vault ribs, cornice enrichment
+ *   goldMat('wood.gilt-frame')      // picture frames
+ */
+export const GILT_INTERIOR: Partial<MaterialSpec> = { metalness: 0.32, roughness: 0.42 };
+
+/** Cached gilt material that reads as gold under ambient-only lighting. */
+export function goldMat(name: MaterialName = 'gold.leaf', extra: Partial<MaterialSpec> = {}): THREE.MeshStandardMaterial {
+  return mat(name, { ...GILT_INTERIOR, ...extra });
+}
+
 /** A metal material tuned for an exterior with no environment map. Cached like any other. */
 export function outdoorMat(name: MaterialName, extra: Partial<MaterialSpec> = {}): THREE.MeshStandardMaterial {
   return mat(name, { ...OUTDOOR_METAL, ...extra });

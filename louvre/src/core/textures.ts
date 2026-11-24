@@ -21,6 +21,14 @@ export function textureStats(): { count: number; bytes: number; names: string[] 
   return { count: cache.size, bytes, names: names.sort() };
 }
 
+/**
+ * Account a texture the project did not draw itself (a PMREM environment map, for instance) so the
+ * HUD's texture budget stays honest.
+ */
+export function accountTexture(name: string, bytes: number, texture?: THREE.Texture): void {
+  cache.set(name, { texture: texture ?? (null as unknown as THREE.Texture), bytes });
+}
+
 function makeCanvas(size: number): { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement } {
   const canvas = document.createElement('canvas');
   canvas.width = size;

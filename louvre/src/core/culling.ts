@@ -32,6 +32,37 @@ export function roomFloorAt(room: RoomDef, x: number, z: number): number {
   return room.floorAt ? room.floorAt(x, z) : room.bounds.min[1];
 }
 
+/**
+ * Which room's floor the walker is standing on.
+ *
+ * Casting a ray down through a museum hits several rooms at once: the Cour Napoléon pavement sits
+ * directly above the Hall Napoléon, which sits above the undercrofts, and every one of their
+ * footprints contains the same (x, z). Taking the first match made the choice depend on declaration
+ * order, and the courtyard always won — the undercroft was unreachable on foot.
+ *
+ * So: among the rooms containing the point, stand on the highest floor that is still at or below the
+ * eye. That is the floor you are actually on, and when the eye drops below the courtyard's own
+ * level (a descending stair, a ramp) the room below takes over. If every candidate floor is above
+ * the eye — a camera under the floor, or a fly camera — fall back to the lowest of them.
+ */
+export function pickFloorAt(rooms: readonly RoomDef[], x: number, z: number, eyeY: number): number {
+  let below: number | null = null;
+  let above: number | null = null;
+  for (const room of rooms) {
+    const b = room.bounds;
+    if (x < b.min[0] - 0.3 || x > b.max[0] + 0.3) continue;
+    if (z < b.min[2] - 0.3 || z > b.max[2] + 0.3) continue;
+    const h = roomFloorAt(room, x, z);
+    if (h <= eyeY + 0.001) {
+      if (below === null || h > below) below = h;
+    } else if (above === null || h < above) {
+      above = h;
+    }
+  }
+  if (below !== null) return below;
+  return above ?? 0;
+}
+
 export interface CullerOptions {
   /** Portal hops to follow from the camera's room. Defaults 2. */
   depth?: number;

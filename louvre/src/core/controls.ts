@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EYE_HEIGHT, PLAYER_RADIUS } from './types';
-import { roomFloorAt, type RoomDef } from './culling';
+import { pickFloorAt, type RoomDef } from './culling';
 
 export type ControlMode = 'walk' | 'tour' | 'fly';
 
@@ -188,7 +188,8 @@ export class Controls {
   }
 
   setSpawn(spawn: SpawnPoint): void {
-    const floor = this.floorAt(spawn.position[0], spawn.position[2]);
+    // The spawn's own eye height is the reference: the camera has not been placed yet.
+    const floor = pickFloorAt(this.colliders, spawn.position[0], spawn.position[2], spawn.position[1]);
     this.eye.set(spawn.position[0], Math.max(spawn.position[1], floor + EYE), spawn.position[2]);
     this.hoverY = this.eye.y;
     this.camera.position.copy(this.eye);
@@ -244,13 +245,7 @@ export class Controls {
    * that moves the camera itself fights this and loses.
    */
   floorAt(x: number, z: number): number {
-    for (const room of this.colliders) {
-      const b = room.bounds;
-      if (x >= b.min[0] - 0.3 && x <= b.max[0] + 0.3 && z >= b.min[2] - 0.3 && z <= b.max[2] + 0.3) {
-        return roomFloorAt(room, x, z);
-      }
-    }
-    return 0;
+    return pickFloorAt(this.colliders, x, z, this.camera.position.y);
   }
 
   /**

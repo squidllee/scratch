@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { EngineRenderer } from './core/renderer';
 import { PerfHud } from './core/perf';
 import { Controls, type ControlMode, type TourWaypoint } from './core/controls';
-import { RoomCuller, cullerInfo, roomFloorAt, type RoomDef } from './core/culling';
+import { RoomCuller, cullerInfo, pickFloorAt, roomFloorAt, type RoomDef } from './core/culling';
 import { AtmosphereManager } from './core/atmosphere';
+import { installEnvironment } from './core/environment';
 import { rng } from './core/rng';
 import { artworks } from './artworks/library';
 import { availableZones, loadZone, zoneAvailable } from './zones/registry';
@@ -27,6 +28,9 @@ const fill = new THREE.DirectionalLight(0xc2d4e8, 1.0);
 fill.position.set(20, 12, -34);
 const bounce = new THREE.AmbientLight(0xffe9cf, 0.35);
 engine.scene.add(hemi, sun, fill, bounce);
+
+// Optional procedural environment map. Off unless asked for: it changes how every metal reads.
+const envHandle = params.get('env') === '1' ? installEnvironment(engine.renderer, engine.scene) : null;
 
 const requested = (params.get('zone') ?? EXAMPLE_ZONE) as AnyZoneId;
 if (!availableZones().includes(requested)) {
@@ -152,6 +156,8 @@ const pixelStats = (): {
   width: number;
   height: number;
   mean: number;
+  centreMean: number;
+  environment: boolean;
   std: number;
   uniqueColours: number;
   sampled: number;
@@ -179,10 +185,26 @@ const pixelStats = (): {
   }
   const mean = n > 0 ? sum / n : 0;
   const variance = n > 0 ? Math.max(0, sumSq / n - mean * mean) : 0;
+  // Mean luminance of the central fifth, for measuring one surface (a gilt vault) instead of a frame.
+  let centreSum = 0;
+  let centreN = 0;
+  const cx0 = Math.floor(width * 0.4);
+  const cx1 = Math.floor(width * 0.6);
+  const cy0 = Math.floor(height * 0.4);
+  const cy1 = Math.floor(height * 0.6);
+  for (let y = cy0; y < cy1; y += step) {
+    for (let x = cx0; x < cx1; x += step) {
+      const i = (y * width + x) * 4;
+      centreSum += 0.2126 * (buf[i] as number) + 0.7152 * (buf[i + 1] as number) + 0.0722 * (buf[i + 2] as number);
+      centreN++;
+    }
+  }
   return {
     width,
     height,
     mean: Math.round(mean * 10) / 10,
+    centreMean: Math.round((centreN > 0 ? centreSum / centreN : 0) * 10) / 10,
+    environment: Boolean(envHandle),
     std: Math.round(Math.sqrt(variance) * 10) / 10,
     uniqueColours: seen.size,
     sampled: n,
@@ -297,6 +319,36 @@ const collisionProbes = (): Record<string, boolean> => {
     fog: engine.scene.fog ? (engine.scene.fog as THREE.FogExp2).density ?? null : null,
     fogColour: engine.scene.fog ? '#' + (engine.scene.fog as THREE.FogExp2).color.getHexString() : null,
   }),
+  debug: () => {
+    const cam = engine.camera;
+    const q = cam.quaternion;
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
+    const visible: Array<{ name: string; visible: boolean; sphere: number[] | null }> = [];
+    engine.scene.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const sph = mesh.geometry.boundingSphere;
+      visible.push({
+        name: mesh.name || (Array.isArray(mesh.material) ? mesh.material[0]?.name : mesh.material.name) || '(unnamed)',
+        visible: mesh.visible,
+        sphere: sph ? [Math.round(sph.center.x), Math.round(sph.center.y), Math.round(sph.center.z), Math.round(sph.radius)] : null,
+      });
+    });
+    return {
+      camera: [Math.round(cam.position.x * 100) / 100, Math.round(cam.position.y * 100) / 100, Math.round(cam.position.z * 100) / 100],
+      forward: [Math.round(fwd.x * 100) / 100, Math.round(fwd.y * 100) / 100, Math.round(fwd.z * 100) / 100],
+      mode: controls.mode,
+      meshes: visible.length,
+      proj: Array.from(engine.camera.projectionMatrix.elements).map((n) => Math.round(n * 1000) / 1000),
+      aspect: engine.camera.aspect,
+      fov: engine.camera.fov,
+      near: engine.camera.near,
+      far: engine.camera.far,
+      fog: engine.scene.fog ? (engine.scene.fog as THREE.FogExp2).density : null,
+      hidden: visible.filter((v) => !v.visible).map((v) => v.name),
+      spheres: visible.slice(0, 4),
+    };
+  },
   pixelStats,
   structure,
   /**
@@ -332,11 +384,22 @@ const collisionProbes = (): Record<string, boolean> => {
   floorProbe: () => {
     const ramp: RoomDef = { id: 'probe-ramp', bounds: { min: [0, 0, 0], max: [4, 3, 6] }, floorAt: (_x, z) => z * 0.5 };
     const flat: RoomDef = { id: 'probe-flat', bounds: { min: [0, 3, 0], max: [4, 6, 6] } };
+
+    // A stack of rooms over one point, exactly like the Cour Napoléon above the Hall Napoléon
+    // above the undercroft: the walker must pick the floor it is standing on, not the first match.
+    const courtyard: RoomDef = { id: 'probe-courtyard', bounds: { min: [-5, 0, -5], max: [5, 21.7, 5] } };
+    const hall: RoomDef = { id: 'probe-hall', bounds: { min: [-5, -9, -5], max: [5, 0, 5] } };
+    const undercroft: RoomDef = { id: 'probe-undercroft', bounds: { min: [-5, -18, -5], max: [5, -9, 5] } };
+    const stack = [courtyard, hall, undercroft];
     return {
       rampAtStart: roomFloorAt(ramp, 1, 0),
       rampAtEnd: roomFloorAt(ramp, 1, 6),
       flat: roomFloorAt(flat, 1, 3),
       atSpawn: controls.floorAt(spawn.position[0], spawn.position[2]),
+      stackOnCourtyard: pickFloorAt(stack, 0, 0, 1.65),
+      stackOnHall: pickFloorAt(stack, 0, 0, -7.35),
+      stackOnUndercroft: pickFloorAt(stack, 0, 0, -16.35),
+      stairBands: [1.65, 0.2, -0.4, -3.0, -7.35].map((eye) => pickFloorAt(stack, 0, 0, eye)),
     };
   },
   setCamera: (p: [number, number, number], l: [number, number, number]) => controls.setCamera(p, l),
