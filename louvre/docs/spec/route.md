@@ -37,7 +37,7 @@ The visitor enters at the pyramid, descends to the Hall Napoléon, and then take
 29. Up the Richelieu stair.
 30. **Napoleon III Apartments, Grand Salon** (544): crimson silk and gold, and the walk ends.
 
-Distances the engine can rely on: the hall to the Daru staircase is 53 m of undercroft, the Grande Galerie is 268 m of unbroken run, the Galerie d'Apollon is 61 m, and the Cour Carrée is 112.5 m across.
+Distances the engine can rely on: the hall to the Daru staircase is 49.5 m of undercroft, the Grande Galerie is 268 m of unbroken run, the Galerie d'Apollon is 61 m, and the Cour Carrée is 112.5 m across.
 
 ## 2. The room table
 

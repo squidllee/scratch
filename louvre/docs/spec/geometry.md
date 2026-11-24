@@ -25,7 +25,7 @@ The palace is a bent trapezoid, not a rectangle. The Cour Napoléon axis is skew
 | Cour Carrée, inner court | 112.5 m square | 112.5 × 112.5 |
 | Cour Carrée wing depth | 23.75 m (from 160 − 112.5 = 47.5, halved) | 23.75 |
 | Cour Napoléon | 28,000 m² | 200 × 140 = 28,000 |
-| Pyramid to Pavillon de l'Horloge | ≈141 m (GPS, pyramid 48.86000 N, 2.335861 E to pavilion 48.86061 N, 2.337694 E) | 116.25 m from pyramid centre to the wing's east face + 23.75 wing = 140 |
+| Pyramid to Pavillon de l'Horloge | ≈141 m from two published point coordinates (pyramid 48.86000 N, 2.335861 E; pavilion 48.86061 N, 2.337694 E) — **treat as ±20 m**, point coordinates are not surveys | **116.25 m** to the Cour Carrée's inner west edge. Chosen because it falls out of the Cour Napoléon's published 28,000 m² and the pyramid's near-central position; the 25 m difference from the GPS figure is inside that figure's error |
 | Pyramid to Arc du Carrousel | ≈220 m (GPS to 48.86173 N, 2.33291 E; and the inverted pyramid's own documentation: 130 m to the pyramid + 90 m to the arc) | 220 |
 | Grande Galerie | 288 m long × 13 m wide | 288 (of which 20 m is the Salon Carré) |
 | Seine façade (Grande Galerie range) | 288 m | 288 |
@@ -137,11 +137,11 @@ The Arc is on the Place du Carrousel, west of the Cour Napoléon proper. It is a
 | Grande Galerie storey | first floor (level 1), with a glazed roof | measured | Wikipedia |
 | Salon Carré | at the east end; its location defines the 288 m | measured | wikipedia |
 | Petite Galerie (Galerie d'Apollon) | **61 m long, 15 m ceiling** | measured | Louvre press office: 61.34 m, ceiling 15 m |
-| Denon wing depth, Cour Napoléon to Seine | ≈71 m at the Salle des États | derived | 61 m Petite Galerie + 13 m Grande Galerie − 3 m of overlap at the corner. This is why the wing contains two internal courtyards |
+| Denon wing depth, Cour Napoléon to Seine | **83.5 m** | derived | Our plan: the Cour Napoléon's south front at z = +70.5, the Seine façade at z = +154. Cross-check: the Cour Carrée's south face at z = +80 to the Grande Galerie's north face at z = +141 is 61 m, which is the Petite Galerie's measured 61.34 m. That depth is what forces two internal courtyards into the wing |
 | Salle des États floor area | **698 m²** | measured | Louvre press, 2019 reopening |
 | Salle des États | 40 m long (widely quoted) → 17.4 m wide | measured / derived | 698 / 40 |
 
-**The Denon wing's plan is not a simple range.** Between the Salle des États block (facing the Cour Napoléon) and the Grande Galerie (on the Seine) there are internal courtyards and service ranges — the Cour du Sphinx and the Cour Lefuel. That is why 71 m of depth exists there. Our route models only the two outer ranges and their link; the courtyards are omitted (see `route.md`).
+**The Denon wing's plan is not a simple range.** Between the Salle des États block (facing the Cour Napoléon) and the Grande Galerie (on the Seine) there are internal courtyards and service ranges — the Cour du Sphinx and the Cour Lefuel. That is why 83.5 m of depth exists there. Our route models only the two outer ranges and their link; the courtyards are omitted (see `route.md`).
 
 **Daru / Denon / Mollien.** The three Denon pavilions on the Cour Napoléon side are named east to west after Pierre Daru, Vivant Denon and Nicolas François Mollien (Wikipedia EN). Their rooms at level 1 are rooms 702 (Daru), 701 (Denon) and 700 (Mollien). The Salle des États (711) is west of Mollien.
 
@@ -151,7 +151,7 @@ The Arc is on the Place du Carrousel, west of the Cour Napoléon proper. It is a
 
 | property | value | tag | source |
 | --- | --- | --- | --- |
-| Richelieu wing depth | ≈71 m (Cour Napoléon to rue de Rivoli) | derived | symmetric with Denon |
+| Richelieu wing depth | **70.5 m** (Cour Napoléon to rue de Rivoli) | derived | Our plan: z = −70.5 to −141. Sized to hold the three courts at their measured north–south widths (41 m at Marly, under 28 m at Khorsabad) plus the ranges on both streets |
 | Cour Marly glazed roof | **57.05 × 42.61 m** | measured | Structural record of the Grand Louvre glazing works |
 | Cour Marly internal north–south width | **41 m** at the west end | measured | Arup Journal 1994 |
 | Cour Khorsabad internal north–south width | **under 28 m** at the east end | measured | Arup Journal 1994 |
