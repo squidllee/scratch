@@ -20,8 +20,8 @@ export const ROOMS = {
   /** First in the room list on purpose: the engine's collision probes use rooms[0], and this is
    *  the only room whose four probe points all fall outside every other footprint. */
   'salle-perrault': { x: [252.25, 276], z: [-60, 60], y0: 0, y1: 6.4 },
-  'galerie-apollon': { x: [116, 133], z: [80, 141], y0: 7, y1: 22 },
-  'rotonde-apollon': { x: [116, 133], z: [141, 154], y0: 7, y1: 22 },
+  'galerie-apollon': { x: [116, 133], z: [80, 141], y0: 7, y1: 20.85 },
+  'rotonde-apollon': { x: [116, 133], z: [141, 154], y0: 7, y1: 20.85 },
   'pavillon-horloge': { x: [116, 139.75], z: [-14, 14], y0: 0, y1: 20 },
   'escalier-henri-ii': { x: [116, 139.75], z: [14, 30], y0: 0, y1: 14 },
   'salle-des-caryatides': { x: [116, 139.75], z: [30, 55], y0: 0, y1: 8.5 },

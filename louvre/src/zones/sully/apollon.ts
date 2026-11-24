@@ -266,15 +266,16 @@ export function buildRotondeApollon(g: THREE.Group): void {
 
   dome({ cx, cz, rx: rx * 0.97, rz: rz * 0.97, y0: SPRING, rise: CROWN - SPRING - 0.7, flatFraction: 0.34, segments: 20, rings: 5, mat: 'ceiling.gold-leaf', parent: g });
 
+  // The lantern sits inside the crown, not through it: the room's box tops out at 20.85.
   const lantern: THREE.BufferGeometry[] = [];
   const lr = 1.4;
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2;
-    lantern.push(bx(0.16, 1.1, 0.16, cx + lr * Math.cos(a), CROWN - 0.35, cz + lr * Math.sin(a)));
+    lantern.push(bx(0.16, 0.62, 0.16, cx + lr * Math.cos(a), CROWN - 0.42, cz + lr * Math.sin(a)));
   }
-  lantern.push(bx(lr * 2.5, 0.16, lr * 2.5, cx, CROWN + 0.22, cz));
+  lantern.push(bx(lr * 2.5, 0.14, lr * 2.5, cx, CROWN - 0.07, cz));
   addPart(g, mergeAll(lantern), 'gold.leaf');
-  addPart(g, boxGeo(lr * 2.1, 0.06, lr * 2.1).translate(cx, CROWN + 0.1, cz), 'app.light-card');
+  addPart(g, boxGeo(lr * 2.1, 0.06, lr * 2.1).translate(cx, CROWN - 0.18, cz), 'app.light-card');
   addPart(g, lightPool(cx, FLOOR + 0.006, cz, 4.4), 'app.light-card');
 
   // Coffers in the dome and a marble medallion under them, so the rotunda is not one smooth curve.
@@ -317,11 +318,24 @@ export function buildRotondeDeMars(g: THREE.Group): void {
   doorOn(g, { face: 'e', plane: b.x[1], along: 68, floorY: 0, width: 2.4, height: 4.4, arched: true, mat: 'trim.stone-limestone-warm' });
   doorOn(g, { face: 's', plane: b.z[1], along: 124.5, floorY: 7, width: 3.6, height: 4.4, arched: true, mat: 'trim.gilt' });
 
-  const ceil = boxGeo(b.x[1] - b.x[0], 0.4, b.z[1] - b.z[0]).translate(cx, b.y1 + 0.2, cz);
-  const beams: THREE.BufferGeometry[] = [];
-  for (let x = b.x[0] + 4; x < b.x[1]; x += 4) beams.push(bx(0.4, 0.36, b.z[1] - b.z[0], x, b.y1 - 0.18, cz));
-  for (let z = b.z[0] + 4; z < b.z[1]; z += 4) beams.push(bx(b.x[1] - b.x[0], 0.36, 0.4, cx, b.y1 - 0.18, z));
-  addPart(g, mergeAll([ceil, ...beams]), 'ceiling.plaster-white');
+  // A shallow stone dome over the half-landing, which is what the amended route asks for.
+  dome({
+    cx,
+    cz,
+    rx: (b.x[1] - b.x[0]) / 2,
+    rz: (b.z[1] - b.z[0]) / 2,
+    y0: 10.4,
+    rise: b.y1 - 10.4 - 0.12,
+    flatFraction: 0.2,
+    segments: 20,
+    rings: 4,
+    mat: 'stone.limestone-pale',
+    parent: g,
+  });
+  corniceOn(g, { face: 'n', at: b.z[0], from: b.x[0], to: b.x[1], y: 10.4, height: 0.5, projection: 0.34, dentils: false, mat: 'trim.stone-limestone-warm' });
+  corniceOn(g, { face: 's', at: b.z[1], from: b.x[0], to: b.x[1], y: 10.4, height: 0.5, projection: 0.34, dentils: false, mat: 'trim.stone-limestone-warm' });
+  corniceOn(g, { face: 'w', at: b.x[0], from: b.z[0], to: b.z[1], y: 10.4, height: 0.5, projection: 0.34, dentils: false, mat: 'trim.stone-limestone-warm' });
+  corniceOn(g, { face: 'e', at: b.x[1], from: b.z[0], to: b.z[1], y: 10.4, height: 0.5, projection: 0.34, dentils: false, mat: 'trim.stone-limestone-warm' });
 
   // The stair up to the Galerie d'Apollon's floor: twenty risers of 0.35 m onto a landing.
   const stair = staircase({ steps: 20, rise: 0.35, run: 0.23, width: 22.8 });
@@ -338,7 +352,7 @@ export function buildRotondeDeMars(g: THREE.Group): void {
   skirtOn(g, { face: 'w', at: b.x[0], from: b.z[0], to: b.z[1], y: 0, height: 0.3, thickness: 0.07, mat: 'trim.stone-limestone-warm' });
 
   // A lantern, so the stair hall is not a stone box: the court-facing window is in the court façade.
-  const glow = q([b.x[0] + 1.4, 11.97, b.z[0] + 2], [b.x[1] - 1.4, 11.97, b.z[0] + 2], [b.x[1] - 1.4, 11.97, b.z[0] + 10], [b.x[0] + 1.4, 11.97, b.z[0] + 10]);
+  const glow = q([b.x[0] + 1.4, 11.72, b.z[0] + 2], [b.x[1] - 1.4, 11.72, b.z[0] + 2], [b.x[1] - 1.4, 11.72, b.z[0] + 10], [b.x[0] + 1.4, 11.72, b.z[0] + 10]);
   glow.computeVertexNormals();
   addPart(g, glow, 'app.light-card');
 }
