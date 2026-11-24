@@ -76,6 +76,29 @@ if (loadErrors.length) {
   banner.textContent = loadErrors.join(' · ');
 }
 
+/**
+ * A ceiling painting is built flat, facing +Z, exactly like a wall painting. Nothing pitches it into
+ * the vault: the Galerie d'Apollon's Delacroix stood upright across a 13.85 m room. Pitch it before
+ * the yaw the zone gave it, and keep the work's own id and position, which the harness counts.
+ */
+const pitched: string[] = [];
+for (const zone of loadedZones) {
+  zone.group.traverse((obj) => {
+    if (obj.userData?.artworkKind !== 'ceiling-painting' || !obj.parent) return;
+    const parent = obj.parent;
+    const pivot = new THREE.Group();
+    pivot.name = 'ceiling-pivot/' + String(obj.userData.artworkId);
+    pivot.position.copy(obj.position);
+    pivot.rotation.y = obj.rotation.y;
+    obj.position.set(0, 0, 0);
+    obj.rotation.set(Math.PI / 2, 0, 0);
+    parent.add(pivot);
+    parent.remove(obj);
+    pivot.add(obj);
+    pitched.push(String(obj.userData.artworkId));
+  });
+}
+
 const assembly = assemble(loadedZones);
 /**
  * One room graph. Every zone declared only its own half of the doors between wings, so the union
@@ -174,6 +197,36 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+/**
+ * Settle the scene for wherever the camera now is: which cells are drawn, whether the exterior's
+ * backdrop is in view, and which wing's sky and fog apply. The frame loop calls this whenever the
+ * camera moved; a teleport (a spawn, a capture, a camera parameter) calls it directly, because a
+ * jump is not a movement the walker's own integrator can see.
+ */
+function applyCellState(): void {
+  const result = culler.compute(engine.camera);
+  if (roomObjects.size) culler.apply(roomObjects, result);
+  cullerInfo.active = result.active;
+  cullerInfo.reason = result.reason;
+
+  // The backdrop is 200k triangles of roof and façade. Standing in a sealed gallery cannot see it,
+  // so it is drawn only when the sky is in view: the camera is outdoors, or the cells it is drawing
+  // include a court — which is what a window onto the Cour Carrée looks at.
+  const cell = result.cameraRoom;
+  const outdoors =
+    cell === null ||
+    openSky.has(cell) ||
+    roomToZone.get(cell) === 'exterior' ||
+    result.active.some((id) => openSky.has(id));
+  backdrop.visible = outdoors;
+
+  const activeZoneId = (cell ? roomToZone.get(cell) : undefined) ?? activeZoneIdFor(cell);
+  if (activeZoneId !== appliedZone) {
+    appliedZone = activeZoneId;
+    atmosphere.apply(zoneAtmospheres.get(activeZoneId));
+  }
+}
+
 let sinceCull = 0;
 engine.onFrame((dt) => {
   const moved = controls.update(dt);
@@ -182,27 +235,7 @@ engine.onFrame((dt) => {
   sinceCull += dt;
   if (moved || sinceCull > 0.25) {
     sinceCull = 0;
-    const result = culler.compute(engine.camera);
-    if (roomObjects.size) culler.apply(roomObjects, result);
-    cullerInfo.active = result.active;
-    cullerInfo.reason = result.reason;
-
-    // The backdrop is 200k triangles of roof and façade. Standing in a sealed gallery cannot see
-    // it, so it is drawn only when the sky is in view: the camera is outdoors, or the cells it is
-    // drawing include a court — which is what a window onto the Cour Carrée looks at.
-    const cell = result.cameraRoom;
-    const outdoors =
-      cell === null ||
-      openSky.has(cell) ||
-      roomToZone.get(cell) === 'exterior' ||
-      result.active.some((id) => openSky.has(id));
-    backdrop.visible = outdoors;
-
-    const activeZoneId = (cell ? roomToZone.get(cell) : undefined) ?? activeZoneIdFor(cell);
-    if (activeZoneId !== appliedZone) {
-      appliedZone = activeZoneId;
-      atmosphere.apply(zoneAtmospheres.get(activeZoneId));
-    }
+    applyCellState();
   }
   return moved;
 });
@@ -369,6 +402,7 @@ const structure = (): Record<string, unknown> => {
     zones: loadedZones.map((z) => z.id),
     rooms: rooms.map((r) => r.id),
     spawns: spawns.map((s) => s.id),
+  spawnTable: () => spawns.map((s) => ({ id: s.id, position: s.position, lookAt: s.lookAt })),
     bounds,
     artworkIds,
     instances,
@@ -381,6 +415,7 @@ const structure = (): Record<string, unknown> => {
       unbridgeable: reconciliation.unbridgeable,
       thresholds: reconciliation.thresholds,
       levelLinks,
+      pitchedCeilingPaintings: pitched,
     },
     tour: {
       waypoints: tourPath.length,
@@ -427,6 +462,7 @@ const collisionProbes = (): Record<string, boolean> => {
   collision: collisionProbes,
   zones: loadedZones.map((z) => z.id),
   spawns: spawns.map((s) => s.id),
+  spawnTable: () => spawns.map((s) => ({ id: s.id, position: s.position, lookAt: s.lookAt })),
   rooms: rooms.map((r) => r.id),
   /** Every room as the culler and the walker see it, with its doors: the assembled graph, printed. */
   roomTable: () =>
@@ -588,7 +624,11 @@ const collisionProbes = (): Record<string, boolean> => {
       floorsSeen: [...new Set(profile.map((p) => p.floor))],
     };
   },
-  setCamera: (p: [number, number, number], l: [number, number, number]) => controls.setCamera(p, l),
+  setCamera: (p: [number, number, number], l: [number, number, number]) => {
+    controls.setCamera(p, l);
+    applyCellState();
+    engine.renderNow();
+  },
   tourProgress: (seconds: number) => controls.tourProgressAfter(seconds),
   /** Walk the route's doors on foot: every portal centre a visitor crosses must be standable. */
   doorWalk: () => {

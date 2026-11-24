@@ -70,6 +70,13 @@ const runProbe = Boolean(flag('probe', false));
 const expectMaterial = flag('expect-material');
 const useEnv = Boolean(flag('env', false));
 const bboxTolerance = Number(flag('bbox-tolerance', 3));
+/**
+ * One page load for every viewpoint. Re-navigating costs the whole scene build (ten seconds on the
+ * assembled museum, which is five wings at once), so a seventeen-viewpoint verification would spend
+ * three minutes building and fifteen seconds drawing. The camera is moved instead: `__test.setCamera`
+ * takes the same position and look target a spawn declares.
+ */
+const oneLoad = Boolean(flag('one-load', false));
 
 /** Pixel verdict floors. Calibrated on the proof gallery: mean 78-85, std 38-42, ~25k colours. */
 const PIXEL_FLOOR = { std: 10, uniqueColours: 2000 };
@@ -237,7 +244,39 @@ async function main() {
       : 'zones=' + encodeURIComponent(zone)) +
     (useEnv ? '&env=1' : '') + (extraQuery ? '&' + extraQuery : '');
 
-  if (captureAll) {
+  if (oneLoad) {
+    await page.goto(base + '/?' + queryBase, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await page.waitForFunction('window.__ready === true', { timeout: 120000 });
+    const table = await page.evaluate(() => window.__test.spawnTable());
+    const wanted = spawnFlags.length ? table.filter((s) => spawnFlags.includes(s.id)) : table;
+    for (const spawn of wanted) {
+      await page.evaluate((p) => window.__test.setCamera(p.position, p.lookAt), spawn);
+      await page.evaluate(
+        () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))),
+      );
+      // Pixel statistics force a render; read the scene's counters after it, not before, or the
+      // draw call and triangle figures belong to the previous viewpoint.
+      const pixels = await page.evaluate(() => window.__test.pixelStats());
+      const stats = await page.evaluate(() => window.__stats());
+      const name = zone + '-' + String(spawn.id).replace(/[^a-z0-9-]+/gi, '-');
+      const file = join(outDir, name + '.png');
+      await page.screenshot({ path: file, type: 'png' });
+      shots.push({ file, stats, pixels });
+      console.log(
+        'captured ' + file + '  draws=' + stats.drawCalls + ' tris=' + stats.triangles +
+        ' texMB=' + stats.textureMB + '  mean=' + pixels.mean + ' centre=' + pixels.centreMean +
+        ' std=' + pixels.std + ' colours=' + pixels.uniqueColours,
+      );
+      if (pixels.std < PIXEL_FLOOR.std) {
+        failures.push({ shot: name, check: 'pixel-std', value: pixels.std, floor: PIXEL_FLOOR.std,
+          message: 'frame is nearly uniform; nothing was rendered, or the camera is inside geometry' });
+      }
+      if (pixels.uniqueColours < PIXEL_FLOOR.uniqueColours) {
+        failures.push({ shot: name, check: 'pixel-colours', value: pixels.uniqueColours, floor: PIXEL_FLOOR.uniqueColours,
+          message: 'frame has almost no colour variety; the scene is blank or flat-lit' });
+      }
+    }
+  } else if (captureAll) {
     const spawns = await (async () => {
       await page.goto(base + '/?' + queryBase, { waitUntil: 'domcontentloaded' });
       await page.waitForFunction('window.__ready === true', { timeout: 60000 });
