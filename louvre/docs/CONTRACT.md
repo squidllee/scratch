@@ -175,6 +175,26 @@ const rooms: RoomDef[] = [
 - The engine renders the camera's room plus rooms reached through visible portals up to two hops,
   and falls back to distance culling when the camera is outside every room (exterior views).
 
+### Starting from the measured spec
+
+The reference data lives at `louvre/docs/spec/` (spec branch) and in the captain drive at
+`handoffs/louvre/spec/`; read whichever exists. Convert each of your rooms straight from
+`route.json`:
+
+```ts
+// route.json room -> RoomDef
+const floorY = room.floorY;
+const ceilY = room.floorY + room.clearHeight_m;
+bounds.min = [room.footprint.x[0], floorY, room.footprint.z[0]];
+bounds.max = [room.footprint.x[1], ceilY, room.footprint.z[1]];
+```
+
+Portals in `route.json` only say `{to, kind}`; you supply the centre, width and height from the
+doorway you actually build (or from `geometry.md`'s opening sizes), and you declare both
+directions. `route.json`'s `zone` field uses the spec's own taxonomy (`denon-interior`,
+`sully-interior`, `richelieu-interior`, `pyramid-courtyard`, `exterior-wings`); the **folder and
+registry id** are the short names in §1 (`denon`, `sully`, `richelieu`, `pyramid`, `exterior`).
+
 Culling only works per room if you give the zone `roomGroups: Map<roomId, Object3D>`. A zone
 without it is drawn whole whenever any of its rooms is active.
 
