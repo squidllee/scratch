@@ -121,7 +121,24 @@ export function mergeByMaterial(root: THREE.Object3D): { group: THREE.Group; sta
     for (const child of [...obj.children]) {
       if (child instanceof THREE.InstancedMesh) {
         before++;
-        instancedKept.push(child.clone());
+        // An InstancedMesh already carries its own transforms per instance, but the transforms of
+        // its ancestors (the group a zone positioned the row in) are not part of them. Bake the
+        // world matrix into every instance matrix so the merged copy lands where the original did.
+        const baked = new THREE.InstancedMesh(
+          normalise(child.geometry.clone()),
+          Array.isArray(child.material) ? child.material[0] : child.material,
+          child.count,
+        );
+        const m = new THREE.Matrix4();
+        for (let i = 0; i < child.count; i++) {
+          child.getMatrixAt(i, m);
+          m.premultiply(child.matrixWorld);
+          baked.setMatrixAt(i, m);
+        }
+        baked.instanceMatrix.needsUpdate = true;
+        baked.frustumCulled = false;
+        baked.name = child.name || child.material.name;
+        instancedKept.push(baked);
         continue;
       }
       if (child instanceof THREE.Mesh) {

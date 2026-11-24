@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EYE_HEIGHT, PLAYER_RADIUS } from './types';
-import type { RoomDef } from './culling';
+import { roomFloorAt, type RoomDef } from './culling';
 
 export type ControlMode = 'walk' | 'tour' | 'fly';
 
@@ -238,11 +238,16 @@ export class Controls {
     this.onChange();
   }
 
-  private floorAt(x: number, z: number): number {
+  /**
+   * Standing height at (x, z). Rooms may declare a `floorAt` function for stairs and ramps; a flat
+   * room falls back to its own floor level. Vertical movement is never a zone's job — a zone
+   * that moves the camera itself fights this and loses.
+   */
+  floorAt(x: number, z: number): number {
     for (const room of this.colliders) {
       const b = room.bounds;
       if (x >= b.min[0] - 0.3 && x <= b.max[0] + 0.3 && z >= b.min[2] - 0.3 && z <= b.max[2] + 0.3) {
-        return b.min[1];
+        return roomFloorAt(room, x, z);
       }
     }
     return 0;

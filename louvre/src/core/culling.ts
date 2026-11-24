@@ -19,6 +19,17 @@ export interface RoomDef {
   /** Interior bounds in world metres. Used for camera containment and fallback distance culling. */
   bounds: Aabb;
   portals?: RoomPortal[];
+  /**
+   * Walkable floor height at (x, z) in metres. Defaults to `bounds.min[1]`, which is right for a
+   * flat room. Supply a function for stairs, ramps, or a stepped dais: the walker asks this every
+   * frame and puts the eye at `height + 1.65 m`, so the camera climbs the stair with you.
+   */
+  floorAt?: (x: number, z: number) => number;
+}
+
+/** The floor height the walker should stand on at (x, z), used by controls and probeable directly. */
+export function roomFloorAt(room: RoomDef, x: number, z: number): number {
+  return room.floorAt ? room.floorAt(x, z) : room.bounds.min[1];
 }
 
 export interface CullerOptions {
