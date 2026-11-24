@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { rng } from '../core/rng';
 import { placeholderArtwork, type ArtworkFactory, type ArtworkLibrary, type ArtworkSpec } from './types';
+import { createArtwork, hasArtwork } from './registry';
 
 /**
  * The artwork registry. Factories register themselves by artwork id; zones only ever name ids.
@@ -18,13 +19,20 @@ class Library implements ArtworkLibrary {
   }
 
   has(id: string): boolean {
-    return this.factories.has(id);
+    return this.factories.has(id) || hasArtwork(id);
   }
 
   create(spec: ArtworkSpec): THREE.Object3D {
     const factory = this.factories.get(spec.id);
     const ctx = { rng: rng('artwork/' + spec.id), placeholder: !factory };
     if (!factory) {
+      // The artwork library's own factories (src/artworks/registry.ts) are the default, so zones
+      // get real art with nothing wired up. register() still overrides them.
+      const built = createArtwork(spec, ctx);
+      if (built) {
+        built.userData.artworkId = spec.id;
+        return built;
+      }
       this.missing.add(spec.id);
       const obj = placeholderArtwork(spec, { ...ctx, placeholder: true });
       obj.userData.artworkId = spec.id;
