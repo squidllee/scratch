@@ -32,28 +32,14 @@ function tube(points: Array<[number, number, number]>, radius: number): THREE.Bu
   return mergeAll(parts);
 }
 
-/**
- * Crystal beads as one instanced draw call.
- *
- * The instances are placed in WORLD space on purpose: `mergeByMaterial` re-parents an InstancedMesh
- * to the merged room group without its old parent's transform, so an instanced part built inside a
- * transformed sub-group would collapse onto the world origin.
- */
-function placeBeads(
-  parent: THREE.Object3D,
-  ring: Array<[number, number, number]>,
-  size: number,
-  at: readonly [number, number, number],
-  rotationY = 0,
-): void {
-  const cos = Math.cos(rotationY);
-  const sin = Math.sin(rotationY);
+/** Crystal beads as one instanced draw call, in the fixture's own frame (merge bakes the group). */
+function beads(ring: Array<[number, number, number]>, size: number): { unit: THREE.BufferGeometry; transforms: THREE.Matrix4[] } {
   const transforms = ring.map(([x, y, z]) => {
     const m = new THREE.Matrix4().makeScale(1, 1.7, 1);
-    m.setPosition(at[0] + x * cos + z * sin, at[1] + y, at[2] - x * sin + z * cos);
+    m.setPosition(x, y, z);
     return m;
   });
-  addPart(parent, { unit: new THREE.OctahedronGeometry(size, 0), transforms }, 'glass.vitrine');
+  return { unit: new THREE.OctahedronGeometry(size, 0), transforms };
 }
 
 export interface ChandelierOptions {
@@ -101,7 +87,7 @@ export function addChandelier(parent: THREE.Object3D, at: readonly [number, numb
   const flameParts: THREE.BufferGeometry[] = [];
   const candleParts: THREE.BufferGeometry[] = [];
   const panParts: THREE.BufferGeometry[] = [];
-  const beads: Array<[number, number, number]> = [];
+  const beadsRing: Array<[number, number, number]> = [];
   const armY = -drop * 0.52;
   const tipY = -drop * 0.3;
 
@@ -145,17 +131,18 @@ export function addChandelier(parent: THREE.Object3D, at: readonly [number, numb
     for (let k = 1; k <= 3; k++) {
       const t = 0.35 + k * 0.17;
       const sag = 0.1 + k * 0.06;
-      beads.push([sx * R * (0.25 + t * 0.7), armY - sag, sz * R * (0.25 + t * 0.7)]);
+      beadsRing.push([sx * R * (0.25 + t * 0.7), armY - sag, sz * R * (0.25 + t * 0.7)]);
     }
     for (let k = 0; k < 5; k++) {
       const b = a + (k / 5) * ((Math.PI * 2) / o.arms);
-      beads.push([Math.sin(b) * R * 0.78, armY - 0.26 - ((k % 3) * 0.03 + (i % 2) * 0.02), Math.cos(b) * R * 0.78]);
+      beadsRing.push([Math.sin(b) * R * 0.78, armY - 0.26 - ((k % 3) * 0.03 + (i % 2) * 0.02), Math.cos(b) * R * 0.78]);
     }
   }
   addPart(g, mergeAll(armParts), 'trim.gilt');
   addPart(g, mergeAll(panParts), 'trim.gilt');
   addPart(g, mergeAll(candleParts), 'ceiling.plaster-white');
   addPart(g, mergeAll(flameParts), 'app.light-card');
+  addPart(g, beads(beadsRing, 0.028), 'glass.vitrine');
 
   // Chains of crystal hanging from the crown down into the bowl.
   const chain: Array<[number, number, number]> = [];
@@ -164,10 +151,9 @@ export function addChandelier(parent: THREE.Object3D, at: readonly [number, numb
     const r = 0.12 + (i % 2) * 0.05;
     chain.push([Math.sin(a) * r, -drop * 0.18 - (i % 3) * 0.09, Math.cos(a) * r]);
   }
+  addPart(g, beads(chain, 0.022), 'glass.vitrine');
   g.position.set(at[0], at[1], at[2]);
   parent.add(g);
-  placeBeads(parent, beads, 0.028, at);
-  placeBeads(parent, chain, 0.022, at);
 }
 
 /** A two-arm gilt sconce, built facing +Z from the wall plane. */
@@ -188,7 +174,7 @@ export function addSconce(parent: THREE.Object3D, at: readonly [number, number, 
   const arms: THREE.BufferGeometry[] = [];
   const candles: THREE.BufferGeometry[] = [];
   const flames: THREE.BufferGeometry[] = [];
-  const beads: Array<[number, number, number]> = [];
+  const beadsRing: Array<[number, number, number]> = [];
   for (const side of [-1, 1]) {
     arms.push(tube([
       [side * 0.06, 0, 0.06],
@@ -205,15 +191,15 @@ export function addSconce(parent: THREE.Object3D, at: readonly [number, number, 
       [side * 0.3 - 0.03, 0.44, 0.34],
       [[0, 0], [0.06, 0], [0.06, 0.08], [0, 0.08]],
     ));
-    for (let k = 0; k < 3; k++) beads.push([side * 0.16, 0.02 - k * 0.07, 0.14 + k * 0.03]);
+    for (let k = 0; k < 3; k++) beadsRing.push([side * 0.16, 0.02 - k * 0.07, 0.14 + k * 0.03]);
   }
   addPart(g, mergeAll(arms), 'trim.gilt');
   addPart(g, mergeAll(candles), 'ceiling.plaster-white');
   addPart(g, mergeAll(flames), 'app.light-card');
+  addPart(g, beads(beadsRing, 0.02), 'glass.vitrine');
   g.position.set(at[0], at[1], at[2]);
   g.rotation.y = rotationY;
   parent.add(g);
-  placeBeads(parent, beads, 0.02, at, rotationY);
 }
 
 /** A gilt console table with a marble top, standing on the floor at `at`. */

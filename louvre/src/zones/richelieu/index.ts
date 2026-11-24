@@ -1,31 +1,31 @@
 import * as THREE from 'three';
 import { boxGeo } from '../../core/geom';
-import { mergeByMaterial, addPart } from '../../core/merge';
+import { addPart, mergeByMaterial } from '../../core/merge';
 import { mat } from '../../core/materials';
 import { cornice, doorway } from '../../core/builders';
-import { cullerInfo, type RoomDef, type RoomPortal } from '../../core/culling';
+import type { RoomDef, RoomPortal } from '../../core/culling';
 import type { SpawnPoint } from '../../core/controls';
 import type { Zone, ZoneContext } from '../types';
 import {
-  crossing,
   escalier,
-  flightUp,
   hammurabi,
   khorsabad,
   marly,
   marlyTerrace,
   MARLY_BAYS,
-  MARLY_STAIR_Z,
   passage,
-  ESCALIER_DOOR_Z,
+  ESCALIER_DOOR_X,
+  ESCALIER_FOOT_Z,
+  ESCALIER_HEAD_Z,
+  SALON_DOOR_Z,
   puget,
   pugetTerrace,
   PUGET_BAYS,
   PUGE_ASCENT_X,
   PUGE_DESCENT_X,
-  PUGE_STAIR_Z,
   salon,
   WALL_T,
+  ZONE_BOX,
   type Cell,
 } from './layout';
 import { buildKhorsabad, buildMarly, buildPuget, sideWall } from './courts';
@@ -37,9 +37,13 @@ import { bakeShade, plate, put } from './parts';
  * Zone `richelieu` — the Richelieu wing's interiors.
  *
  * Seven rooms from `route.json` (Passage Richelieu, the three glazed courts, the Hammurabi room,
- * the Richelieu stair, the Napoleon III Grand Salon) plus the walkable cells that stitch their
- * four different floor levels together. Each room is merged per material into its own group, so the
- * culler can hide it on its own.
+ * the Richelieu stair, the Napoleon III Grand Salon) plus the level-1 crossing that links the head
+ * of the stair to the salon. Each room is merged per material into its own group, so the culler can
+ * hide it on its own.
+ *
+ * The wing sits at four levels (0, −4.5, 1 and 7). Each level change is a `floorAt` ramp on the
+ * room it happens in — the walker reads that every frame and climbs with it, so the flights are not
+ * a chain of thin cells and the camera never jumps a step.
  */
 
 const portal = (
@@ -55,40 +59,8 @@ const bounds = (c: Cell): RoomDef['bounds'] => ({
   max: [c.x1, c.ceil, c.z1],
 });
 
-/** A door on the shared face of two cells, both directions. */
-function doorBetween(
-  a: { id: string; cell: Cell },
-  b: { id: string; cell: Cell },
-  opts: { axis: 'x' | 'z'; at: number; along: number; width: number; height: number },
-): [RoomPortal, RoomPortal] {
-  const normalA: readonly [number, number, number] = opts.axis === 'x' ? [Math.sign(opts.at - (a.cell.x0 + a.cell.x1) / 2) || 1, 0, 0] : [0, 0, Math.sign(opts.at - (a.cell.z0 + a.cell.z1) / 2) || 1];
-  const y = Math.max(a.cell.floor, b.cell.floor) + opts.height / 2;
-  const centre: [number, number, number] =
-    opts.axis === 'x' ? [opts.at, y, opts.along] : [opts.along, y, opts.at];
-  return [
-    portal(b.id, centre, opts.width, opts.height, normalA),
-    portal(a.id, centre, opts.width, opts.height, [-normalA[0], 0, -normalA[2]]),
-  ];
-}
-
-/** The level-1 walkway across the passage's north end, on its own solid mass. */
-function buildCrossing(): THREE.Group {
-  const g = new THREE.Group();
-  const cx = (crossing.x0 + crossing.x1) / 2;
-  const cz = (crossing.z0 + crossing.z1) / 2;
-  const w = crossing.x1 - crossing.x0;
-  const d = crossing.z1 - crossing.z0;
-  // The mass the passage runs under.
-  put(g, boxGeo(w, 7, d), 'wall.ochre-light', [cx, 3.5, cz]);
-  put(g, plate({ width: w, depth: d, nx: 6, nz: 3, y: crossing.floor, light: () => 0.72 }), 'floor.marble-checker', [cx, crossing.floor, cz]);
-  sideWall(g, crossing, { side: 'n', baseY: crossing.floor, height: 6.5, material: 'wall.ochre-light' });
-  sideWall(g, crossing, { side: 's', baseY: crossing.floor, height: 6.5, material: 'wall.ochre-light' });
-  put(g, boxGeo(w, 0.4, d), 'ceiling.plaster-white', [cx, crossing.ceil + 0.2, cz]);
-  put(g, cornice({ length: d, height: 0.3, projection: 0.16, dentils: false }), 'trim.gilt', [crossing.x0, crossing.ceil - 0.3, cz], Math.PI / 2);
-  put(g, doorway({ width: 3.2, height: 4, thickness: WALL_T }), 'trim.gilt', [crossing.x0, crossing.floor, crossing.z0 + 2.5], Math.PI / 2);
-  put(g, doorway({ width: 3.2, height: 4, thickness: WALL_T }), 'trim.stone-limestone-warm', [crossing.x1, crossing.floor, crossing.z0 + 1], -Math.PI / 2);
-  return g;
-}
+const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
+const lerp = (a: number, b: number, t: number): number => a + (b - a) * clamp01(t);
 
 export const createZone = (ctx: ZoneContext): Zone => {
   const merged = (raw: THREE.Group, name: string): THREE.Group => {
@@ -103,11 +75,11 @@ export const createZone = (ctx: ZoneContext): Zone => {
   const hammuGroup = merged(buildHammurabi(ctx.rng('salle-hammurabi')), 'salle-hammurabi');
   const passageGroup = merged(buildPassage(ctx.rng('passage')), 'passage-richelieu');
   const escGroup = merged(buildEscalier(ctx.rng('escalier')), 'escalier-richelieu');
-  const crossingGroup = merged(buildCrossing(), 'richelieu-crossing');
+
   const rawSalon = buildSalon(ctx.rng('salon'));
-  // The salon is lit by its own chandeliers, not by the scene's daylight rig, and a metal-only gold
-  // has nothing to reflect in a scene with no environment map. One emissive-lifted gilt for this
-  // room reads as candle-lit bronze; it merges into its own bucket, so it still costs one draw call.
+  // The salon is lit by its own chandeliers rather than by the scene's daylight rig, and a fully
+  // metallic gold has no environment map to reflect here, so it renders near-black. One
+  // emissive-lifted gilt for this room reads as candle-lit bronze; it merges into its own bucket.
   const candleGilt = mat('trim.gilt', { metalness: 0.62, roughness: 0.4, emissive: 0.55 });
   rawSalon.traverse((o) => {
     if (o instanceof THREE.Mesh && !(o instanceof THREE.InstancedMesh) && (o.material as THREE.Material).name === 'trim.gilt') {
@@ -115,10 +87,8 @@ export const createZone = (ctx: ZoneContext): Zone => {
     }
   });
   const salonGroup = merged(rawSalon, 'napoleon-iii-grand-salon');
-  // Chandelier light, baked: warm, rising with height the way two crystal fixtures would, and
-  // brighter along the centre line between them. No realtime lights are added for this room.
-  bakeShade(salonGroup, (x, y, z) => {
-    const h = Math.max(0, Math.min(1, (y - salon.floor) / (salon.ceil - salon.floor)));
+  bakeShade(salonGroup, (x, y) => {
+    const h = clamp01((y - salon.floor) / (salon.ceil - salon.floor));
     const centreLine = 1 - 0.18 * Math.min(1, Math.abs(x + 45) / 15);
     const gain = (0.66 + 0.62 * h) * centreLine;
     return [gain * 1.06, gain, gain * 0.86];
@@ -130,127 +100,84 @@ export const createZone = (ctx: ZoneContext): Zone => {
   sculptureBases(hammuGroup, 'salle-hammurabi');
   placeArtworks({ marly: marlyGroup, puget: pugetGroup, khorsabad: khorGroup, hammurabi: hammuGroup });
 
-  // ---- level changes, as runs of walkable cells --------------------------------
-  const marlySteps = [
-    { id: 'cour-marly-step-1', cell: { x0: -76, x1: -74.5, z0: MARLY_STAIR_Z[0], z1: MARLY_STAIR_Z[1], floor: 4 / 3, ceil: 20 } as Cell },
-    { id: 'cour-marly-step-2', cell: { x0: -74.5, x1: -73, z0: MARLY_STAIR_Z[0], z1: MARLY_STAIR_Z[1], floor: 2 / 3, ceil: 20 } as Cell },
+  // ---- the room graph ----------------------------------------------------------
+  const marlyStairX = marlyTerrace.x1;
+  const marlyStairRun = 4;
+  const marlyTerraceHeight = marlyTerrace.floor;
+
+  const rooms: RoomDef[] = [
+    // Leaf room first: the zone-agnostic collision probes in main.ts read rooms[0], and this is the
+    // one room in the wing whose neighbours two metres out really are walls.
+    {
+      id: 'salle-hammurabi',
+      bounds: bounds(hammurabi),
+      portals: [portal('cour-khorsabad', [hammurabi.x0, 2.2, -103], 4.2, 4.4, [-1, 0, 0])],
+    },
+    {
+      id: 'cour-marly',
+      bounds: bounds(marly),
+      // Raised terrace at the west end, reached by a broad flight: a straight ramp in x.
+      floorAt: (x) =>
+        x <= marlyStairX ? marlyTerraceHeight : lerp(marlyTerraceHeight, marly.floor, (x - marlyStairX) / marlyStairRun),
+      portals: [
+        ...MARLY_BAYS.map((z) => portal('passage-richelieu', [marly.x1, 2.3, z], 4.6, 4.6, [1, 0, 0])),
+      ],
+    },
+    {
+      id: 'passage-richelieu',
+      bounds: bounds(passage),
+      portals: [
+        ...MARLY_BAYS.map((z) => portal('cour-marly', [passage.x0, 2.3, z], 4.6, 4.6, [-1, 0, 0])),
+        ...PUGET_BAYS.map((z) => portal('cour-puget', [passage.x1, 2.3, z], 4.6, 4.6, [1, 0, 0])),
+        portal('escalier-richelieu', [ESCALIER_DOOR_X, 2.1, passage.z0], 3.6, 4.2, [0, 0, -1]),
+        portal('passage-richelieu-link', [passage.x0 + (passage.x1 - passage.x0) / 2, 2.3, passage.z1], 9.4, 4.6, [0, 0, 1]),
+      ],
+    },
+    {
+      id: 'cour-puget',
+      bounds: bounds(puget),
+      // West gallery at passage level, the court 4.5 m below, the flight up to Khorsabad at the east.
+      floorAt: (x) => {
+        if (x <= PUGE_DESCENT_X[0]) return pugetTerrace.floor;
+        if (x < PUGE_DESCENT_X[1]) return lerp(pugetTerrace.floor, puget.floor, (x - PUGE_DESCENT_X[0]) / (PUGE_DESCENT_X[1] - PUGE_DESCENT_X[0]));
+        if (x <= PUGE_ASCENT_X[0]) return puget.floor;
+        return lerp(puget.floor, khorsabad.floor, (x - PUGE_ASCENT_X[0]) / (PUGE_ASCENT_X[1] - PUGE_ASCENT_X[0]));
+      },
+      portals: [
+        ...PUGET_BAYS.map((z) => portal('passage-richelieu', [puget.x0, 2.3, z], 4.6, 4.6, [-1, 0, 0])),
+        portal('cour-khorsabad', [puget.x1, 2.4, -108.5], 8, 4.9, [1, 0, 0]),
+      ],
+    },
+    {
+      id: 'cour-khorsabad',
+      bounds: bounds(khorsabad),
+      portals: [
+        portal('salle-hammurabi', [khorsabad.x1, 2.2, -103], 4.2, 4.4, [1, 0, 0]),
+        portal('cour-puget', [khorsabad.x0, 2.4, -108.5], 8, 4.9, [-1, 0, 0]),
+      ],
+    },
+    {
+      id: 'escalier-richelieu',
+      // The volume runs from the foot of the flight to the vault; the floor ramps 1 → 7 inside it.
+      bounds: { min: [escalier.x0, escalier.floor, escalier.z0], max: [escalier.x1, escalier.ceil, escalier.z1] },
+      floorAt: (_x, z) => {
+        if (z >= ESCALIER_FOOT_Z) return escalier.floor;
+        if (z <= ESCALIER_HEAD_Z) return salon.floor;
+        return lerp(escalier.floor, salon.floor, (ESCALIER_FOOT_Z - z) / (ESCALIER_FOOT_Z - ESCALIER_HEAD_Z));
+      },
+      portals: [
+        portal('passage-richelieu', [ESCALIER_DOOR_X, 2.1, escalier.z1], 3.6, 4.2, [0, 0, 1]),
+        portal('napoleon-iii-grand-salon', [escalier.x0, 8.5, SALON_DOOR_Z], 3.2, 3.6, [-1, 0, 0]),
+      ],
+    },
+    {
+      id: 'napoleon-iii-grand-salon',
+      bounds: bounds(salon),
+      portals: [portal('escalier-richelieu', [salon.x1, 8.5, SALON_DOOR_Z], 3.2, 3.6, [1, 0, 0])],
+    },
   ];
-  const marlyStairZ = [MARLY_STAIR_Z[0], MARLY_STAIR_Z[1]] as const;
 
-  const pugetDescent = flightUp('cour-puget-descent', PUGE_DESCENT_X[0], PUGE_DESCENT_X[1], PUGE_STAIR_Z[0], PUGE_STAIR_Z[1], pugetTerrace.floor, puget.floor, 6, puget.ceil);
-  const pugetAscent = flightUp('cour-puget-ascent', PUGE_ASCENT_X[0], PUGE_ASCENT_X[1], PUGE_STAIR_Z[0], PUGE_STAIR_Z[1], puget.floor, khorsabad.floor, 6, puget.ceil);
-
-  // route.json's escalier footprint (z -141 … -122) overlaps Cour Puget's by 7 m, because the
-  // stair is one of the spec's invented rooms. The stair therefore keeps to the northern part of
-  // its footprint (z -141 … -129) so the two cells never both claim a point.
-  const escSouth = -129;
-  const escBase: Cell = { x0: escalier.x0, x1: escalier.x1, z0: escSouth, z1: escSouth - 2.5, floor: escalier.floor, ceil: escalier.ceil };
-  const escLanding: Cell = { x0: escalier.x0, x1: escalier.x1, z0: escalier.z0, z1: -139.5, floor: 7, ceil: escalier.ceil };
-  const escFlight = flightUp('escalier-richelieu-flight', -8, 2, -131.5, -139.5, escalier.floor, 7, 6, escalier.ceil);
-
-  // --- the room graph -----------------------------------------------------------
-  const rooms: RoomDef[] = [];
-  const addRoom = (id: string, cell: Cell, portals: RoomPortal[] = []): void => {
-    rooms.push({ id, bounds: bounds(cell), portals });
-  };
-
-  // Leaf room first: the zone-agnostic collision probes in main.ts read rooms[0], and this is the
-  // one room in the wing whose neighbours really are all walls two metres out.
-  addRoom('salle-hammurabi', hammurabi, [
-    portal('cour-khorsabad', [hammurabi.x0, 2.2, -103], 4.2, 4.4, [-1, 0, 0]),
-  ]);
-
-  // Cour Marly, its terrace and the flight between them.
-  addRoom('cour-marly-terrace', marlyTerrace, [
-    portal('cour-marly', [-76, 3, (marlyStairZ[0] + marlyStairZ[1]) / 2], marlyStairZ[1] - marlyStairZ[0], 3, [1, 0, 0]),
-  ]);
-  for (const s of marlySteps) {
-    const east = s.cell.x1;
-    addRoom(s.id, s.cell, [
-      portal('cour-marly', [east, s.cell.floor + 1, (marlyStairZ[0] + marlyStairZ[1]) / 2], marlyStairZ[1] - marlyStairZ[0], 3, [1, 0, 0]),
-      portal('cour-marly-terrace', [s.cell.x0, s.cell.floor + 1, (marlyStairZ[0] + marlyStairZ[1]) / 2], marlyStairZ[1] - marlyStairZ[0], 3, [-1, 0, 0]),
-    ]);
-  }
-  addRoom('cour-marly', marly, [
-    ...MARLY_BAYS.map((z) => portal('passage-richelieu', [marly.x1, 2.3, z], 4.6, 4.6, [1, 0, 0])),
-    portal('cour-marly-terrace', [-76, 3, (marlyStairZ[0] + marlyStairZ[1]) / 2], marlyStairZ[1] - marlyStairZ[0], 3, [-1, 0, 0]),
-    ...marlySteps.map((s) => portal(s.id, [s.cell.x0, s.cell.floor + 1, (marlyStairZ[0] + marlyStairZ[1]) / 2], marlyStairZ[1] - marlyStairZ[0], 3, [-1, 0, 0])),
-  ]);
-
-  // Passage Richelieu: the spine, with five bays into each court.
-  addRoom('passage-richelieu', passage, [
-    ...MARLY_BAYS.map((z) => portal('cour-marly', [passage.x0, 2.3, z], 4.6, 4.6, [-1, 0, 0])),
-    ...PUGET_BAYS.map((z) => portal('cour-puget-terrace', [passage.x1, 2.3, z], 4.6, 4.6, [1, 0, 0])),
-    portal('escalier-richelieu', [passage.x1, 2.1, ESCALIER_DOOR_Z], 3.6, 4.2, [1, 0, 0]),
-    portal('passage-richelieu-link', [passage.x0 + (passage.x1 - passage.x0) / 2, 2.3, passage.z1], 9.4, 4.6, [0, 0, 1]),
-  ]);
-
-  // Cour Puget: the west gallery, the flight down into the court, the court, the flight up to
-  // Khorsabad.
-  addRoom('cour-puget-terrace', pugetTerrace, [
-    ...PUGET_BAYS.map((z) => portal('passage-richelieu', [pugetTerrace.x0, 2.3, z], 4.6, 4.6, [-1, 0, 0])),
-    portal(pugetDescent[0]!.id, [pugetTerrace.x1, 1.5, (PUGE_STAIR_Z[0] + PUGE_STAIR_Z[1]) / 2], PUGE_STAIR_Z[1] - PUGE_STAIR_Z[0], 3, [1, 0, 0]),
-  ]);
-  pugetDescent.forEach((s, i) => {
-    const portals: RoomPortal[] = [
-      portal('cour-puget-terrace', [s.cell.x0, s.cell.floor + 1.5, (PUGE_STAIR_Z[0] + PUGE_STAIR_Z[1]) / 2], PUGE_STAIR_Z[1] - PUGE_STAIR_Z[0], 3, [-1, 0, 0]),
-      portal('cour-puget', [s.cell.x1, s.cell.floor + 1.5, (PUGE_STAIR_Z[0] + PUGE_STAIR_Z[1]) / 2], PUGE_STAIR_Z[1] - PUGE_STAIR_Z[0], 3, [1, 0, 0]),
-    ];
-    const next = pugetDescent[i + 1];
-    if (next) portals.push(portal(next.id, [s.cell.x1, s.cell.floor + 1.5, (PUGE_STAIR_Z[0] + PUGE_STAIR_Z[1]) / 2], PUGE_STAIR_Z[1] - PUGE_STAIR_Z[0], 3, [1, 0, 0]));
-    addRoom(s.id, s.cell, portals);
-  });
-  addRoom('cour-puget', puget, [
-    ...pugetDescent.map((s) => portal(s.id, [s.cell.x0, s.cell.floor + 1.5, (PUGE_STAIR_Z[0] + PUGE_STAIR_Z[1]) / 2], PUGE_STAIR_Z[1] - PUGE_STAIR_Z[0], 3, [-1, 0, 0])),
-    ...pugetAscent.map((s) => portal(s.id, [s.cell.x1, s.cell.floor + 1.5, (PUGE_STAIR_Z[0] + PUGE_STAIR_Z[1]) / 2], PUGE_STAIR_Z[1] - PUGE_STAIR_Z[0], 3, [1, 0, 0])),
-  ]);
-  pugetAscent.forEach((s, i) => {
-    const portals: RoomPortal[] = [
-      portal('cour-puget', [s.cell.x0, s.cell.floor + 1.5, (PUGE_STAIR_Z[0] + PUGE_STAIR_Z[1]) / 2], PUGE_STAIR_Z[1] - PUGE_STAIR_Z[0], 3, [-1, 0, 0]),
-    ];
-    const next = pugetAscent[i + 1];
-    if (next) portals.push(portal(next.id, [s.cell.x1, s.cell.floor + 1.5, (PUGE_STAIR_Z[0] + PUGE_STAIR_Z[1]) / 2], PUGE_STAIR_Z[1] - PUGE_STAIR_Z[0], 3, [1, 0, 0]));
-    else portals.push(portal('cour-khorsabad', [s.cell.x1, 0.5, (PUGE_STAIR_Z[0] + PUGE_STAIR_Z[1]) / 2], PUGE_STAIR_Z[1] - PUGE_STAIR_Z[0], 3, [1, 0, 0]));
-    addRoom(s.id, s.cell, portals);
-  });
-
-  addRoom('cour-khorsabad', khorsabad, [
-    portal('salle-hammurabi', [khorsabad.x1, 2.2, -103], 4.2, 4.4, [1, 0, 0]),
-    portal(pugetAscent[pugetAscent.length - 1]!.id, [khorsabad.x0, 0.5, (PUGE_STAIR_Z[0] + PUGE_STAIR_Z[1]) / 2], PUGE_STAIR_Z[1] - PUGE_STAIR_Z[0], 3, [-1, 0, 0]),
-  ]);
-
-  // The stair: base landing, eight walkable bands up the flight, top landing, crossing.
-  addRoom('escalier-richelieu', escBase, [
-    portal('passage-richelieu', [escalier.x0, 2.1, ESCALIER_DOOR_Z], 3.6, 4.2, [-1, 0, 0]),
-    portal(escFlight[0]!.id, [-3, 1.8, -131.5], 10, 4, [0, 0, -1]),
-  ]);
-  escFlight.forEach((s, i) => {
-    const portals: RoomPortal[] = [];
-    const prev = i === 0 ? null : escFlight[i - 1]!;
-    if (prev) portals.push(portal(prev.id, [-3, s.cell.floor + 1, s.cell.z0], 10, 3, [0, 0, 1]));
-    const next = escFlight[i + 1];
-    if (next) portals.push(portal(next.id, [-3, s.cell.floor + 1, s.cell.z1], 10, 3, [0, 0, -1]));
-    else portals.push(portal('escalier-richelieu-landing', [-3, 8, s.cell.z1], 10, 3.5, [0, 0, -1]));
-    addRoom(s.id, s.cell, portals);
-  });
-  addRoom('escalier-richelieu-landing', escLanding, [
-    portal(escFlight[escFlight.length - 1]!.id, [-3, 8, -139.5], 10, 3.5, [0, 0, 1]),
-    portal('richelieu-crossing', [escalier.x0, 8.5, -140], 3.2, 4, [-1, 0, 0]),
-  ]);
-
-  addRoom('richelieu-crossing', crossing, [
-    portal('escalier-richelieu-landing', [crossing.x1, 8.5, -140], 3.2, 4, [1, 0, 0]),
-    portal('napoleon-iii-grand-salon', [crossing.x0, 8.5, -138.5], 3.2, 4, [-1, 0, 0]),
-  ]);
-
-  addRoom('napoleon-iii-grand-salon', salon, [
-    portal('richelieu-crossing', [salon.x1, 8.5, -138.5], 3.2, 4, [1, 0, 0]),
-  ]);
-
-  void doorBetween;
-  void escBase;
-
-  // ---- spawn points: the tour order, west to east to level 1 -------------------
+  // ---- spawn points: the tour order, west to east and then up to level 1 -------------
   const spawnPoints: SpawnPoint[] = [
     { id: 'passage-richelieu-south', position: [-23, 1.65, -74], lookAt: [-23, 3.0, -120], label: 'Passage Richelieu, from the Pyramid end' },
     { id: 'passage-richelieu-marly-bay', position: [-23, 1.65, -108.5], lookAt: [-79, 8.5, -108.5], label: 'Through the arcade into Cour Marly' },
@@ -261,55 +188,66 @@ export const createZone = (ctx: ZoneContext): Zone => {
     { id: 'cour-khorsabad-lamassu', position: [45, 1.65, -108.5], lookAt: [35.4, 2.4, -114.7], label: 'Cour Khorsabad: the lamassu guard the doorway' },
     { id: 'cour-khorsabad-east', position: [58, 1.65, -103], lookAt: [66, 2.2, -103], label: 'Cour Khorsabad, toward the Hammurabi room' },
     { id: 'salle-hammurabi-stele', position: [72.5, 1.65, -103], lookAt: [79.5, 1.5, -103], label: 'The Code of Hammurabi' },
-    { id: 'escalier-richelieu', position: [-3, 2.65, -130.1], lookAt: [-3, 6.5, -139], label: 'Escalier Richelieu, from the foot' },
-    { id: 'escalier-richelieu-top', position: [-3, 8.65, -140.2], lookAt: [-3, 3.2, -132], label: 'Escalier Richelieu, from the level-1 landing' },
-    { id: 'napoleon-iii-grand-salon-entrance', position: [-32.2, 8.65, -138.5], lookAt: [-52, 10.4, -131], label: 'Grand Salon, from its entrance' },
+    { id: 'escalier-richelieu', position: [-23, 2.65, -123.4], lookAt: [-23, 7.2, -137], label: 'Escalier Richelieu, from the foot' },
+    { id: 'escalier-richelieu-top', position: [-23.5, 8.65, -139.6], lookAt: [-27, 3.0, -126], label: 'Escalier Richelieu, from the level-1 landing' },
+    { id: 'napoleon-iii-grand-salon-entrance', position: [-31.8, 8.65, -138], lookAt: [-52, 10.6, -131], label: 'Grand Salon, from its entrance' },
     { id: 'napoleon-iii-grand-salon-centre', position: [-45, 8.65, -133], lookAt: [-40, 12.2, -122], label: 'Grand Salon, under the chandeliers' },
   ];
 
   const group = new THREE.Group();
   group.name = 'zone:richelieu';
-  for (const g of [passageGroup, marlyGroup, pugetGroup, khorGroup, hammuGroup, escGroup, crossingGroup, salonGroup]) group.add(g);
+  for (const g of [passageGroup, marlyGroup, pugetGroup, khorGroup, hammuGroup, escGroup, salonGroup]) group.add(g);
 
-  /**
-   * Which cell or cells each merged group serves. A wing with four floor levels and flights between
-   * them has several cells per group (the stair bands, the court terraces), and `RoomCuller.apply`
-   * assigns `visible` once per map entry, so two ids pointing at one object overwrite each other:
-   * the last one mapped wins and the geometry vanishes while you stand on a step whose sibling cell
-   * is inactive. The map therefore holds one inert object per room id, and the real groups follow
-   * the active-cell set below — a group is drawn when any of its cells is the camera's room or
-   * within two portal hops of it.
-   */
-  const cellGroups: Array<{ group: THREE.Object3D; cells: string[] }> = [
-    { group: passageGroup, cells: ['passage-richelieu'] },
-    { group: marlyGroup, cells: ['cour-marly', 'cour-marly-terrace', 'cour-marly-step-1', 'cour-marly-step-2'] },
-    { group: pugetGroup, cells: ['cour-puget', 'cour-puget-terrace', ...pugetDescent.map((s) => s.id), ...pugetAscent.map((s) => s.id)] },
-    { group: khorGroup, cells: ['cour-khorsabad'] },
-    { group: hammuGroup, cells: ['salle-hammurabi'] },
-    { group: escGroup, cells: ['escalier-richelieu', 'escalier-richelieu-landing', ...escFlight.map((s) => s.id)] },
-    { group: crossingGroup, cells: ['richelieu-crossing'] },
-    { group: salonGroup, cells: ['napoleon-iii-grand-salon'] },
-  ];
-  const roomGroups = new Map<string, THREE.Object3D>();
-  for (const room of rooms) roomGroups.set(room.id, new THREE.Object3D());
+  const roomGroups = new Map<string, THREE.Object3D>([
+    ['passage-richelieu', passageGroup],
+    ['cour-marly', marlyGroup],
+    ['cour-puget', pugetGroup],
+    ['cour-khorsabad', khorGroup],
+    ['salle-hammurabi', hammuGroup],
+    ['escalier-richelieu', escGroup],
+    ['napoleon-iii-grand-salon', salonGroup],
+  ]);
 
   const triangleTable: Record<string, number> = {};
-  for (const { group: g, cells } of cellGroups) {
+  let total = 0;
+  for (const [id, obj] of roomGroups) {
     let tris = 0;
-    g.traverse((o) => {
+    obj.traverse((o) => {
       if (o instanceof THREE.Mesh) {
         const geo = o.geometry;
         const count = geo.index ? geo.index.count / 3 : geo.attributes.position.count / 3;
         tris += o instanceof THREE.InstancedMesh ? count * o.count : count;
       }
     });
-    triangleTable[cells[0] as string] = Math.round(tris);
+    triangleTable[id] = Math.round(tris);
+    total += tris;
   }
-  const total = Object.entries(triangleTable)
-    .filter(([id]) => ['passage-richelieu', 'cour-marly', 'cour-puget', 'cour-khorsabad', 'salle-hammurabi', 'escalier-richelieu', 'napoleon-iii-grand-salon', 'richelieu-crossing'].includes(id))
-    .reduce((n, [, v]) => n + v, 0);
-  group.userData.triangles = { perRoom: triangleTable, total };
-  console.info('[richelieu] triangles: ' + JSON.stringify(triangleTable) + ' total=' + total);
+  group.userData.triangles = { perRoom: triangleTable, total: Math.round(total) };
+
+  // Out-of-box audit. A wall is 0.9 m thick and a cornice projects 0.5 m, so 1.6 m of slack in plan
+  // and in height is legitimate; anything past that is geometry in the wrong place, and the message
+  // names it. (The raw bounds check in --verify uses a 3 m tolerance and cannot name a mesh.)
+  const pad = 1.6;
+  const box = new THREE.Box3(
+    new THREE.Vector3(ZONE_BOX.x[0] - pad, ZONE_BOX.y[0] - pad, ZONE_BOX.z[0] - pad),
+    new THREE.Vector3(ZONE_BOX.x[1] + pad, ZONE_BOX.y[1] + pad, ZONE_BOX.z[1] + pad),
+  );
+  const outside: string[] = [];
+  group.updateMatrixWorld(true);
+  group.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const b = new THREE.Box3().setFromObject(o);
+    if (box.containsBox(b)) return;
+    const d = Math.max(
+      box.min.x - b.min.x, b.max.x - box.max.x,
+      box.min.y - b.min.y, b.max.y - box.max.y,
+      box.min.z - b.min.z, b.max.z - box.max.z,
+    );
+    if (d <= 0.05) return;
+    outside.push((o.name || '(unnamed ' + (o.material as THREE.Material).name + ')') + ' by ' + d.toFixed(1) + ' m @ ' + b.min.toArray().map((n) => n.toFixed(1)).join(',') + ' .. ' + b.max.toArray().map((n) => n.toFixed(1)).join(','));
+  });
+  if (outside.length) console.warn('[richelieu] geometry outside the zone box: ' + outside.join('; '));
+  console.info('[richelieu] triangles: ' + JSON.stringify(triangleTable) + ' total=' + Math.round(total));
 
   return {
     id: 'richelieu',
@@ -317,12 +255,8 @@ export const createZone = (ctx: ZoneContext): Zone => {
     group,
     roomGroups,
     spawnPoints,
-    update(): void {
-      const active = cullerInfo.active;
-      for (const { group: g, cells } of cellGroups) {
-        g.visible = active.length === 0 || cells.some((c) => active.includes(c));
-      }
-    },
+    // An interior: dim, warm, and quietly hazy so the far end of a 65 m passage falls away.
+    atmosphere: { background: 0x0b0a09, fog: { color: 0x0b0a09, density: 0.0013 } },
     dispose(): void {
       group.traverse((o) => {
         if (o instanceof THREE.Mesh) {

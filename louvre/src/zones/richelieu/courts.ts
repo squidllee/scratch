@@ -3,16 +3,14 @@ import { boxGeo, smoothstep } from '../../core/geom';
 import { addPart, addParts } from '../../core/merge';
 import { cornice, doorway, wall } from '../../core/builders';
 import {
+  CORNICE,
   khorsabad,
   marly,
   marlyTerrace,
-  MARLY_STAIR_WIDTH,
-  MARLY_STAIR_Z,
   puget,
   pugetTerrace,
   PUGE_ASCENT_X,
   PUGE_DESCENT_X,
-  PUGE_STAIR_Z,
   WALL_T,
 } from './layout';
 import {
@@ -194,31 +192,34 @@ export function buildMarly(rng: Rng): THREE.Group {
 
   put(g, plate({ width: w, depth: d, nx: 36, nz: 28, light: daylight }), 'floor.marble-checker', [cx, marly.floor, cz]);
 
-  sideWall(g, marly, { side: 'n', baseY: 0, height: 20, material: 'wall.ochre-light', openings: marlyWindowHoles(marly, 'n') });
-  sideWall(g, marly, { side: 's', baseY: 0, height: 20, material: 'wall.ochre-light', openings: marlyWindowHoles(marly, 's') });
-  sideWall(g, marly, { side: 'w', baseY: 0, height: 20, material: 'wall.ochre-light', openings: marlyWindowHoles(marly, 'w') });
-  courtWindows(g, marly, ['n', 's', 'w'], [{ sill: 7.9, head: 11.5, bay: 4.5 }, { sill: 13.6, head: 16.8, bay: 4.5 }], 'trim.stone-limestone-warm');
+  sideWall(g, marly, { side: 'n', baseY: 0, height: CORNICE, material: 'wall.ochre-light', openings: marlyWindowHoles(marly, 'n') });
+  sideWall(g, marly, { side: 's', baseY: 0, height: CORNICE, material: 'wall.ochre-light', openings: marlyWindowHoles(marly, 's') });
+  sideWall(g, marly, { side: 'w', baseY: 0, height: CORNICE, material: 'wall.ochre-light', openings: marlyWindowHoles(marly, 'w') });
+  courtWindows(
+    g,
+    marly,
+    ['n', 's', 'w'],
+    [{ sill: 7.9, head: 11.5, bay: 4.5 }, { sill: 13.6, head: 16.8, bay: 4.5 }, { sill: 17.6, head: 19.9, bay: 4.5 }],
+    'trim.stone-limestone-warm',
+  );
 
   galleryRing(g, marly, 7.4, 3.1, 'trim.stone-limestone-warm');
 
-  // The old cornice the Pei roof props off.
-  corniceRing(g, marly, 19.5, 'trim.stone-limestone-warm', 0.55);
+  // The courtyard cornice the Pei vault is propped on.
+  corniceRing(g, marly, CORNICE - 0.55, 'trim.stone-limestone-warm', 0.55);
 
   // Raised terrace at the west end and the flight down from it.
   const t = marlyTerrace;
   const tw = t.x1 - t.x0;
   const td = t.z1 - t.z0;
   put(g, boxGeo(tw, t.floor, td), 'trim.stone-limestone-warm', [t.x0 + tw / 2, t.floor / 2, cz]);
-  put(g, plate({ width: tw, depth: td, nx: 10, nz: 20, y: t.floor, light: (x, z) => daylight(x, z) * 0.98 }), 'floor.marble-checker', [t.x0 + tw / 2, t.floor, cz]);
-  const step = stoneFlight({ steps: 8, rise: 0.25, run: 0.5, width: MARLY_STAIR_WIDTH, dir: '-x' });
-  put(g, step, 'trim.stone-limestone-warm', [t.x1 + 4, 0, (MARLY_STAIR_Z[0] + MARLY_STAIR_Z[1]) / 2]);
-  // Parapets along the terrace edges either side of the flight.
-  const northLen = MARLY_STAIR_Z[0] - t.z0;
-  const southLen = t.z1 - MARLY_STAIR_Z[1];
-  put(g, parapet({ length: northLen, height: 0.95 }), 'trim.stone-limestone-warm', [t.x1, t.floor, t.z0 + northLen / 2], Math.PI / 2);
-  put(g, parapet({ length: southLen, height: 0.95 }), 'trim.stone-limestone-warm', [t.x1, t.floor, t.z1 - southLen / 2], Math.PI / 2);
+  put(g, plate({ width: tw, depth: td, nx: 10, nz: 20, y: t.floor, light: (x, z) => daylight(x, z) * 1.02 }), 'floor.marble-checker', [t.x0 + tw / 2, t.floor, cz]);
+  // The flight runs the full width of the court: a terrace reached by a broad flight, which is also
+  // what lets the walker's floorAt ramp (a pure function of x) agree with the treads everywhere.
+  const step = stoneFlight({ steps: 8, rise: 0.25, run: 0.5, width: td, dir: '-x' });
+  put(g, step, 'trim.stone-limestone-warm', [t.x1 + 4, 0, cz]);
 
-  glazedRoof(g, { cell: marly, spring: 19.6, rise: 0.68, trusses: 12, purlins: 8, segments: 10 });
+  glazedRoof(g, { cell: marly, spring: CORNICE, rise: marly.ceil - CORNICE, trusses: 12, purlins: 8, segments: 14 });
   return g;
 }
 
@@ -231,6 +232,7 @@ function marlyWindowHoles(cell: { x0: number; x1: number; z0: number; z1: number
   for (const along of bayCentres(a, b, count)) {
     out.push({ at: along, width: 2.4, sill: 7.9, head: 11.5 });
     out.push({ at: along, width: 2.4, sill: 13.6, head: 16.8 });
+    out.push({ at: along, width: 2.4, sill: 17.6, head: 19.9 });
   }
   return out;
 }
@@ -255,41 +257,43 @@ export function buildPuget(rng: Rng): THREE.Group {
 
   put(g, plate({ width: w, depth: d, nx: 34, nz: 28, light: daylight }), 'floor.marble-checker', [cx, puget.floor, cz]);
 
-  sideWall(g, puget, { side: 'n', baseY: puget.floor, height: 18, material: 'wall.ochre-light', openings: pugetWindowHoles('n') });
-  sideWall(g, puget, { side: 's', baseY: puget.floor, height: 18, material: 'wall.ochre-light', openings: pugetWindowHoles('s') });
+  sideWall(g, puget, { side: 'n', baseY: puget.floor, height: CORNICE - puget.floor, material: 'wall.ochre-light', openings: pugetWindowHoles('n') });
+  sideWall(g, puget, { side: 's', baseY: puget.floor, height: CORNICE - puget.floor, material: 'wall.ochre-light', openings: pugetWindowHoles('s') });
   // East wall: shared with Cour Khorsabad, with the opening between the two courts.
   sideWall(g, puget, {
     side: 'e',
     baseY: puget.floor,
-    height: 18,
+    height: CORNICE - puget.floor,
     material: 'wall.ochre-light',
     openings: [...pugetWindowHoles('e'), { at: -108.5, width: 8, sill: 4.5, head: 9.4 }],
   });
-  courtWindows(g, puget, ['n', 's'], [{ sill: 2.9, head: 6.4, bay: 4.5 }, { sill: 8.2, head: 11.2, bay: 4.5 }], 'trim.stone-limestone-warm');
+  courtWindows(
+    g,
+    puget,
+    ['n', 's', 'e'],
+    [
+      { sill: 2.9, head: 6.4, bay: 4.5 },
+      { sill: 8.2, head: 11.2, bay: 4.5 },
+      { sill: 14.6, head: 19.0, bay: 4.5 },
+    ],
+    'trim.stone-limestone-warm',
+  );
 
   galleryRing(g, puget, 6.2, 2.6, 'trim.stone-limestone-warm');
-  corniceRing(g, puget, 13.1, 'trim.stone-limestone-warm', 0.5);
+  corniceRing(g, puget, CORNICE - 0.5, 'trim.stone-limestone-warm', 0.5);
 
   // West gallery at passage level, and the flight down into the court.
   const pt = pugetTerrace;
   put(g, boxGeo(pt.x1 - pt.x0, 4.5, d), 'trim.stone-limestone-warm', [(pt.x0 + pt.x1) / 2, puget.floor + 2.25, cz]);
   put(g, plate({ width: pt.x1 - pt.x0, depth: d, nx: 6, nz: 20, y: pugetTerrace.floor, light: (x, z) => daylight(x, z) }), 'floor.marble-checker', [(pt.x0 + pt.x1) / 2, pugetTerrace.floor, cz]);
-  const stairZ0 = PUGE_STAIR_Z[0];
-  const stairZ1 = PUGE_STAIR_Z[1];
-  const stairCz = (stairZ0 + stairZ1) / 2;
-  const stairW = stairZ1 - stairZ0;
-  const down = stoneFlight({ steps: 18, rise: 0.25, run: 0.55, width: stairW, dir: '-x' });
-  put(g, down, 'trim.stone-limestone-warm', [PUGE_DESCENT_X[1], puget.floor, stairCz]);
-  // Parapet along the gallery edge either side of the flight.
-  put(g, parapet({ length: stairZ0 - puget.z0 }), 'trim.stone-limestone-warm', [pt.x1, pugetTerrace.floor, (puget.z0 + stairZ0) / 2], Math.PI / 2);
-  put(g, parapet({ length: puget.z1 - stairZ1 }), 'trim.stone-limestone-warm', [pt.x1, pugetTerrace.floor, (stairZ1 + puget.z1) / 2], Math.PI / 2);
+  // Both flights run the full depth of the court, so the walker's floorAt ramp is a function of x
+  // alone: a terraced court with continuous steps rather than two staircases in a wall.
+  const down = stoneFlight({ steps: 18, rise: 0.25, run: 0.55, width: d, dir: '-x' });
+  put(g, down, 'trim.stone-limestone-warm', [PUGE_DESCENT_X[1], puget.floor, cz]);
+  const up = stoneFlight({ steps: 18, rise: 0.25, run: 0.55, width: d, dir: '+x' });
+  put(g, up, 'trim.stone-limestone-warm', [PUGE_ASCENT_X[0], puget.floor, cz]);
 
-  // Flight up to Khorsabad's level on the east side.
-  const up = stoneFlight({ steps: 18, rise: 0.25, run: 0.55, width: stairW, dir: '+x' });
-  put(g, up, 'trim.stone-limestone-warm', [PUGE_ASCENT_X[0], puget.floor, stairCz]);
-  put(g, parapet({ length: stairZ0 - puget.z0 }), 'trim.stone-limestone-warm', [PUGE_ASCENT_X[0], puget.floor, (puget.z0 + stairZ0) / 2], Math.PI / 2);
-
-  glazedRoof(g, { cell: puget, spring: 12.9, rise: 0.6, trusses: 11, purlins: 7, segments: 9 });
+  glazedRoof(g, { cell: puget, spring: CORNICE, rise: puget.ceil - CORNICE, trusses: 11, purlins: 7, segments: 12 });
   return g;
 }
 
@@ -302,6 +306,7 @@ function pugetWindowHoles(side: 'n' | 's' | 'e'): Array<{ at: number; width: num
   for (const along of bayCentres(a, b, count)) {
     out.push({ at: along, width: 2.4, sill: 2.9, head: 6.4 });
     out.push({ at: along, width: 2.4, sill: 8.2, head: 11.2 });
+    out.push({ at: along, width: 2.4, sill: 14.6, head: 19.0 });
   }
   return out;
 }
@@ -323,12 +328,12 @@ export function buildKhorsabad(rng: Rng): THREE.Group {
 
   put(g, plate({ width: w, depth: d, nx: 26, nz: 28, light: daylight }), 'floor.stone-flag', [cx, khorsabad.floor, cz]);
 
-  sideWall(g, khorsabad, { side: 'n', baseY: 0, height: 12, material: 'wall.slate-green', openings: khorHoles('n') });
-  sideWall(g, khorsabad, { side: 's', baseY: 0, height: 12, material: 'wall.slate-green', openings: khorHoles('s') });
+  sideWall(g, khorsabad, { side: 'n', baseY: 0, height: CORNICE, material: 'wall.slate-green', openings: khorHoles('n') });
+  sideWall(g, khorsabad, { side: 's', baseY: 0, height: CORNICE, material: 'wall.slate-green', openings: khorHoles('s') });
   sideWall(g, khorsabad, {
     side: 'w',
     baseY: 0,
-    height: 12,
+    height: CORNICE,
     material: 'wall.slate-green',
     openings: [...khorHoles('w'), { at: -108.5, width: 8, head: 4.9 }],
   });
@@ -336,20 +341,26 @@ export function buildKhorsabad(rng: Rng): THREE.Group {
   sideWall(g, khorsabad, {
     side: 'e',
     baseY: 0,
-    height: 12,
+    height: CORNICE,
     material: 'wall.slate-green',
     openings: [{ at: -103, width: 4.2, head: 4.4, arched: true }],
   });
   put(g, doorway({ width: 4.2, height: 4.4, arched: true }), 'trim.stone-limestone-warm', [khorsabad.x1, 0, -103], -Math.PI / 2);
 
-  courtWindows(g, khorsabad, ['n', 's', 'w'], [{ sill: 5.4, head: 9.6, bay: 5 }], 'trim.stone-limestone-warm');
+  courtWindows(
+    g,
+    khorsabad,
+    ['n', 's', 'w'],
+    [{ sill: 5.4, head: 9.6, bay: 5 }, { sill: 12.4, head: 16.6, bay: 5 }],
+    'trim.stone-limestone-warm',
+  );
   galleryRing(g, khorsabad, 4.6, 2.4, 'trim.stone-limestone-warm');
-  corniceRing(g, khorsabad, 11.2, 'trim.stone-limestone-warm', 0.45);
+  corniceRing(g, khorsabad, CORNICE - 0.45, 'trim.stone-limestone-warm', 0.45);
 
   // The two lamassu doorways: a threshold band of stone across the court floor.
   put(g, boxGeo(2.2, 0.08, 40.4), 'trim.stone-limestone-warm', [khorsabad.x0 + 1.1, 0.04, cz]);
 
-  glazedRoof(g, { cell: khorsabad, spring: 11.4, rise: 0.5, trusses: 8, purlins: 5, segments: 8 });
+  glazedRoof(g, { cell: khorsabad, spring: CORNICE, rise: khorsabad.ceil - CORNICE, trusses: 8, purlins: 5, segments: 9 });
   return g;
 }
 
@@ -359,7 +370,10 @@ function khorHoles(side: 'n' | 's' | 'w'): Array<{ at: number; width: number; si
   const b = horizontal ? khorsabad.x1 : khorsabad.z1;
   const count = Math.max(2, Math.round((b - a) / 5));
   const out: Array<{ at: number; width: number; sill: number; head: number }> = [];
-  for (const along of bayCentres(a, b, count)) out.push({ at: along, width: 2.4, sill: 5.4, head: 9.6 });
+  for (const along of bayCentres(a, b, count)) {
+    out.push({ at: along, width: 2.4, sill: 5.4, head: 9.6 });
+    out.push({ at: along, width: 2.4, sill: 12.4, head: 16.6 });
+  }
   return out;
 }
 
