@@ -18,7 +18,7 @@ The measured, sourced data every zone thread builds from. Written by the spec th
 1. Your zone box is in `coordinates.md` §3. Build inside it; two boxes that overlap in all three axes is a bug.
 2. Your rooms are listed under your zone in `coordinates.md` §5. Each room's footprint, floor level, clear height, ceiling type, floor and wall material and lighting are in `route.json`.
 3. Your materials are keys into `palette.json`. Do not invent a hex value for a wall: if the room needs a colour that is not there, add it to the palette instead of hardcoding it in your zone.
-4. The cornice is at y = 20.4 everywhere. Roofs above that line belong to the exterior zone.
+4. The cornice is at y = 20.4 and the ridge at 28.7. Roof **surfaces** and façade skins belong to the exterior zone; an interior room owns its **volume** and may rise into the roof as its architecture requires. The rooms that do, and the height each reaches, are listed in `coordinates.md` §3 — the Richelieu courts to 26.4 m, the two Apollon rooms to 20.85 m.
 5. Portals are undirected, reciprocal, and planar: both rooms must share a wall, or the run fails. Derive a doorway's position from the shared wall between two room footprints; never hard-code a door coordinate.
 
 ## Read this first if you are the artwork library thread

@@ -14,17 +14,28 @@ const fail = (m) => errors.push(m);
 const warn = (m) => warns.push(m);
 
 // ---- zones (authoritative copy of coordinates.md) -------------------------
+// `volume` boxes compete for space and must not intersect. The exterior zone is a `surface`
+// envelope: it owns the roof planes and façade skins over the same y range an interior may rise
+// into, so it is not compared against volumes. That is the rule from coordinates.md section 4.
+const RIDGE_Y = 28.7;
+const CORNICE_Y = 20.4;
+const HEADROOM = new Set([
+  'galerie-apollon',
+  'rotonde-apollon',
+  'cour-marly',
+  'cour-puget',
+  'cour-khorsabad',
+  'napoleon-iii-grand-salon',
+]);
 const zones = {
-  "pyramid-courtyard": [
-    { x: [-236, 116], y: [-9.5, 21.7], z: [-70.5, 70.5] },
+  'pyramid-courtyard': [
+    { kind: 'volume', x: [-236, 116], y: [-9.5, 21.7], z: [-70.5, 70.5] },
   ],
-  "denon-interior": [{ x: [-172, 116], y: [-9.5, 20.4], z: [70.5, 154] }],
-  "richelieu-interior": [{ x: [-84, 116], y: [-9.5, 20.4], z: [-141, -70.5] }],
-  "sully-interior": [{ x: [116, 276], y: [-9.5, 20.4], z: [-91.5, 154] }],
-  "exterior-wings": [
-    { x: [-172, 116], y: [20.4, 42], z: [70.5, 154] },
-    { x: [-84, 116], y: [20.4, 42], z: [-141, -70.5] },
-    { x: [116, 276], y: [20.4, 42], z: [-91.5, 154] },
+  'denon-interior': [{ kind: 'volume', x: [-172, 116], y: [-9.5, RIDGE_Y], z: [70.5, 154] }],
+  'richelieu-interior': [{ kind: 'volume', x: [-84, 116], y: [-9.5, RIDGE_Y], z: [-141, -70.5] }],
+  'sully-interior': [{ kind: 'volume', x: [116, 276], y: [-9.5, RIDGE_Y], z: [-91.5, 154] }],
+  'exterior-wings': [
+    { kind: 'surface', x: [-172, 276], y: [CORNICE_Y, 40], z: [-141, 154] },
   ],
 };
 
@@ -32,10 +43,12 @@ const zones = {
 const boxes = [];
 for (const [z, list] of Object.entries(zones))
   for (const b of list) boxes.push({ zone: z, ...b });
+const volumes = boxes.filter((b) => b.kind === 'volume');
+const surfaces = boxes.filter((b) => b.kind === 'surface');
 const ov = (a0, a1, b0, b1) => Math.min(a1, b1) - Math.max(a0, b0);
-for (let i = 0; i < boxes.length; i++)
-  for (let j = i + 1; j < boxes.length; j++) {
-    const A = boxes[i], B = boxes[j];
+for (let i = 0; i < volumes.length; i++)
+  for (let j = i + 1; j < volumes.length; j++) {
+    const A = volumes[i], B = volumes[j];
     const dx = ov(A.x[0], A.x[1], B.x[0], B.x[1]);
     const dy = ov(A.y[0], A.y[1], B.y[0], B.y[1]);
     const dz = ov(A.z[0], A.z[1], B.z[0], B.z[1]);
@@ -57,9 +70,18 @@ for (const r of route.rooms) {
     (b) =>
       fp.x[0] >= b.x[0] - 0.01 && fp.x[1] <= b.x[1] + 0.01 &&
       fp.z[0] >= b.z[0] - 0.01 && fp.z[1] <= b.z[1] + 0.01 &&
-      yLo >= b.y[0] - 0.01 && yHi <= b.y[1] + 2.0
+      yLo >= b.y[0] - 0.01 && yHi <= b.y[1] + 0.01
   );
   if (!inside) fail(`${r.id} footprint escapes its zone box ${r.zone}`);
+}
+
+// ---- 2b. vertical rule: interiors may rise into the roof, up to the ridge -
+for (const r of route.rooms) {
+  const top = r.floorY + (r.clearHeight_m ?? 0);
+  if (top > RIDGE_Y + 0.01)
+    fail(`${r.id} tops out at ${top.toFixed(2)} m, above the ${RIDGE_Y} m ridge`);
+  if (top > CORNICE_Y && !HEADROOM.has(r.id))
+    fail(`${r.id} rises above the ${CORNICE_Y} m cornice (${top.toFixed(2)} m) but is not in the HEADROOM set; add it here and in coordinates.md`);
 }
 
 // ---- 3. portals reciprocal and resolvable --------------------------------

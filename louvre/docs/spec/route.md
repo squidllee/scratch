@@ -61,8 +61,8 @@ Distances the engine can rely on: the hall to the Daru staircase is 49.5 m of un
 | galerie-des-sessions | — | denon | 1 | 7.0 | 7.5 | 992 | invented | glazed-skylight | floor.parquet-versailles | wall.red-madder-deep | salle-des-etats, grande-galerie | 0 |
 | grande-galerie | 710 | denon | 1 | 7.0 | 9.5 | 3484 | measured-width/truncated-length | glazed-skylight | floor.parquet-versailles | wall.stone-grey | galerie-des-sessions, salon-carre | 3 |
 | salon-carre | — | denon | 1 | 7.0 | 8.5 | 260 | estimated | coffered | floor.parquet-versailles | wall.stone-grey | grande-galerie, rotonde-apollon | 0 |
-| rotonde-apollon | — | sully | 1 | 7.0 | 15 | 221 | estimated | vault | floor.marble-checker | wall.apollon-blue | salon-carre, galerie-apollon | 0 |
-| galerie-apollon | 705 | sully | 1 | 7.0 | 15 | 1037 | measured-length | vault | floor.marble-checker | wall.apollon-blue | rotonde-apollon, rotonde-de-mars | 2 |
+| rotonde-apollon | — | sully | 1 | 7.0 | 13.85 | 221 | estimated | vault | floor.marble-checker | wall.apollon-blue | salon-carre, galerie-apollon | 0 |
+| galerie-apollon | 705 | sully | 1 | 7.0 | 13.85 | 1037 | measured-length | vault | floor.marble-checker | wall.apollon-blue | rotonde-apollon, rotonde-de-mars | 2 |
 | pavillon-horloge | — | sully | 0,1,2 | 0.0 | 20 | 665 | derived | vault | floor.stone-flag | wall.stone-grey | cour-napoleon, cour-carree, escalier-henri-ii, sully-l2-corridor | 0 |
 | escalier-henri-ii | — | sully | 0,1,2 | 0.0 | 14 | 380 | estimated | vault | floor.stone-flag | wall.stone-grey | pavillon-horloge, salle-des-caryatides | 0 |
 | salle-des-caryatides | 348 | sully | 0 | 0.0 | 8.5 | 594 | measured-area/derived-split | coffered | floor.stone-flag | wall.stone-grey | escalier-henri-ii, rotonde-de-mars | 3 |
@@ -75,13 +75,12 @@ Distances the engine can rely on: the hall to the Daru staircase is 49.5 m of un
 | sully-l2-corridor | — | sully | 2 | 13.6 | 4.2 | 1568 | invented | flat | floor.parquet-poitiers | wall.ochre-light | pavillon-horloge, dutch-rooms | 0 |
 | dutch-rooms | 837 | sully | 2 | 13.6 | 4.2 | 956 | derived | flat | floor.parquet-poitiers | wall.slate-green | sully-l2-corridor | 2 |
 | passage-richelieu | — | richelieu | 0 | 0.0 | 5 | 987 | estimated | flat | floor.stone-flag | wall.ochre-light | passage-richelieu-link, cour-marly, cour-puget, escalier-richelieu | 0 |
-| cour-marly | 102 | richelieu | 0,-1 | 0.0 | 20 | 2214 | measured-roof/derived-floor | glazed-skylight | floor.marble-checker | wall.ochre-light | passage-richelieu | 1 |
-| cour-puget | 105 | richelieu | -1 | -4.5 | 18 | 2050 | measured-width/derived-length | glazed-skylight | floor.marble-checker | wall.ochre-light | passage-richelieu, cour-khorsabad | 1 |
-| cour-khorsabad | 229 | richelieu | 0 | 0.0 | 12 | 1312 | measured-width/derived-length | glazed-skylight | floor.stone-flag | wall.slate-green | cour-puget, salle-hammurabi | 1 |
+| cour-marly | 102 | richelieu | 0,-1 | 0.0 | 26.4 | 2214 | measured-roof/derived-floor | glazed-skylight | floor.marble-checker | wall.ochre-light | passage-richelieu | 1 |
+| cour-puget | 105 | richelieu | -1 | -4.5 | 30.9 | 2050 | measured-width/derived-length | glazed-skylight | floor.marble-checker | wall.ochre-light | passage-richelieu, cour-khorsabad | 1 |
+| cour-khorsabad | 229 | richelieu | 0 | 0.0 | 24 | 1312 | measured-width/derived-length | glazed-skylight | floor.stone-flag | wall.slate-green | cour-puget, salle-hammurabi | 1 |
 | salle-hammurabi | 227 | richelieu | 0 | 0.0 | 5.5 | 624 | estimated | flat | floor.stone-flag | wall.slate-green | cour-khorsabad | 1 |
 | escalier-richelieu | — | richelieu | 1 | 7.0 | 10 | 266 | invented | vault | floor.marble-checker | wall.ochre-light | passage-richelieu, napoleon-iii-grand-salon | 0 |
 | napoleon-iii-grand-salon | 544 | richelieu | 1 | 7.0 | 6.5 | 570 | estimated | flat | floor.parquet-versailles | wall.crimson-silk | escalier-richelieu | 0 |
-
 
 ### Why `rotonde-de-mars` exists
 
@@ -128,7 +127,9 @@ The Escalier Daru with the Victory at the top of three flights; the three Roman 
 
 ## 5. Heights to build to, and one hard ceiling
 
-The Galerie d'Apollon publishes two heights that disagree: a **15 m ceiling** and a **20.85 m vault crown**. Measured from the same floor they cannot both be true — the gallery floor is at y = 7, so 15 m of ceiling puts the vault at 22 m and 8 m of central canvas would be hung from a crown already above the Sully zone box. **Hold the crown as absolute: 20.85 m above the courtyard, which is 13.85 m of clear height above the gallery floor.** `route.json` carries `clearHeight_m: 13.85` and `ceiling.vaultCrown_m: 20.85` for both Apollon rooms. Nothing in the Sully ring goes above 20.4 m except this crown; only the Pavillon de l'Horloge's dome exceeds it, and that belongs to the exterior zone. Nothing in the Sully ring goes above it; only the Pavillon de l'Horloge's dome does, and that belongs to the exterior zone.
+**Interiors do not stop at the cornice.** A room may rise into the roof as its own architecture requires, up to the ridge at 28.7 m; the exterior zone owns the surface above it, not the volume. Four rooms use that headroom and are declared in `coordinates.md` §3: the two Apollon rooms to 20.85 m, and the three Richelieu courts to 26.4, 26.4 and 24 m, whose glazed vaults sit about 6 m over the courtyard cornices.
+
+The Galerie d'Apollon publishes two heights that disagree: a **15 m ceiling** and a **20.85 m vault crown**. Measured from the same floor they cannot both be true — the gallery floor is at y = 7, so 15 m of ceiling puts the vault at 22 m and 8 m of central canvas would be hung from a crown already above the Sully zone box. **Hold the crown as absolute: 20.85 m above the courtyard, which is 13.85 m of clear height above the gallery floor.** `route.json` carries `clearHeight_m: 13.85` and `ceiling.vaultCrown_m: 20.85` for both Apollon rooms. The vault is the only part of the Sully ring above the cornice; the Pavillon de l'Horloge tops out on it at 20.0 m, and its dome belongs to the exterior zone. Nothing in the Sully ring goes above it; only the Pavillon de l'Horloge's dome does, and that belongs to the exterior zone.
 
 ## 6. Conflicts inside the real museum that a clean model has to resolve
 

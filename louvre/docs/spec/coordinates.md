@@ -57,23 +57,38 @@ Read it as: the Cour Napoléon is a 200 × 140 m court with the pyramid in it; t
 
 ## 3. Zone boxes
 
-Six zones, seven boxes. The `exterior-wings` zone gets three roof boxes instead of one so that the courtyard stays clear for the pyramid and the courts.
+Six zones. Interior zones are **volumes**; the exterior zone is a **surface envelope**. That distinction is the whole point of the split (see §4): an interior room owns its volume and may rise into the roof, and the exterior zone owns the skin that covers it.
 
-| zone | purpose | x (m) | y (m) | z (m) | size (m) |
+| zone | kind | purpose | x (m) | y (m) | z (m) |
 | --- | --- | --- | --- | --- | --- |
-| `pyramid-courtyard` | pyramid, satellites, Arc du Carrousel, Cour Napoléon paving, Place du Carrousel paving, **Hall Napoléon and the two undercroft links** | −236 … +116 | −9.5 … **21.7** | −70.5 … +70.5 | 352 × 31.2 × 141 |
-| `denon-interior` | every interior space of the Denon wing, levels −1, 0, 1 | −172 … +116 | −9.5 … 20.4 | +70.5 … +154 | 288 × 29.9 × 83.5 |
-| `richelieu-interior` | every interior space of the Richelieu wing, levels −1, 0, 1, plus the three glazed courts | −84 … +116 | −9.5 … 20.4 | −141 … −70.5 | 200 × 29.9 × 70.5 |
-| `sully-interior` | the Cour Carrée ring, the Cour Carrée itself, the Pavillon de l'Horloge, the Petite Galerie (Galerie d'Apollon), the Colonnade wing | +116 … +276 | −9.5 … 20.4 | −91.5 … +154 | 160 × 29.9 × 245.5 |
-| `exterior-wings`, roof box 1 | roofs, attics and mansards over the Denon wing | −172 … +116 | **20.4 … 42** | +70.5 … +154 | 288 × 21.6 × 83.5 |
-| `exterior-wings`, roof box 2 | roofs over the Richelieu wing | −84 … +116 | 20.4 … 42 | −141 … −70.5 | 200 × 21.6 × 70.5 |
-| `exterior-wings`, roof box 3 | roofs over the Sully ring and the Petite Galerie | +116 … +276 | 20.4 … 42 | −91.5 … +154 | 160 × 21.6 × 245.5 |
+| `pyramid-courtyard` | volume | pyramid, satellites, Arc du Carrousel, both courts' paving, **Hall Napoléon and the two undercroft links** | −236 … +116 | −9.5 … **21.7** | −70.5 … +70.5 |
+| `denon-interior` | volume | every interior space of the Denon wing, levels −1, 0, 1 | −172 … +116 | −9.5 … **28.7** | +70.5 … +154 |
+| `richelieu-interior` | volume | every interior space of the Richelieu wing, levels −1, 0, 1, plus the three glazed courts | −84 … +116 | −9.5 … **28.7** | −141 … −70.5 |
+| `sully-interior` | volume | the Cour Carrée ring, the Cour Carrée itself, the Pavillon de l'Horloge, the Petite Galerie, the Colonnade wing | +116 … +276 | −9.5 … **28.7** | −91.5 … +154 |
+| `exterior-wings` | surface | roof planes from the cornice up, pavilion domes, and the four façade skins | −172 … +276 | 20.4 … 40 | −141 … +154 |
 
-**Every box pair either overlaps in at most two axes or merely touches.** The tower of the pyramid reaches 21.64 m, above the 20.4 m cornice line, which is exactly why the roof boxes stop at the court edges instead of spanning the whole footprint.
+**The interior volumes stop at the ridge, 28.7 m.** That is the highest an interior room may reach, and no room reaches it. The exterior zone's envelope starts at the cornice, 20.4 m, and runs to the top of the pavilion domes at 40 m. The two overlap between 20.4 and 28.7 **by design**: they are not competing for space, they are the inside and the outside of the same roof. `validate.mjs` therefore checks overlap among volumes only, and separately checks that no interior volume exceeds the ridge.
+
+### Rooms that use the headroom
+
+The cornice is not a ceiling for interiors. These are the rooms whose volume the reviewer should know about, with the absolute height each reaches, so nobody has to rediscover them at merge time:
+
+| room | top of volume (m, absolute) | above the 20.4 m cornice? | what rises |
+| --- | --- | --- | --- |
+| `cour-marly` | **26.4** | yes, 6.0 | Pei's glazed vault, propped on the courtyard cornices; the structural record limits every court roof to about 7 m of rise so it stays behind the Rivoli roofline |
+| `cour-puget` | **26.4** | yes, 6.0 | the same vault system over a floor 4.5 m lower, so its clear height is 30.9 |
+| `cour-khorsabad` | **24.0** | yes, 3.6 | the third and lowest court |
+| `galerie-apollon` | **20.85** | yes, 0.45 | the gilded barrel vault; clear height is 13.85 above a gallery floor at 7 |
+| `rotonde-apollon` | **20.85** | yes, 0.45 | the same vault, continuing round the rotunda |
+| `napoleon-iii-grand-salon` | 13.5 | **no** | a 6.5 m salon on a level-1 floor: tall for its floor, and still under the cornice. Listed because it is the room most likely to be assumed taller than it is |
+
+The Pavillon de l'Horloge tops out at 20.0 m, on the cornice line. Its dome rises to about 40 m and belongs to `exterior-wings`.
+
+Everything else in `route.json` tops out below 20.4. If a room is added that tops out above the cornice, add it to this table and to the `HEADROOM` set in `validate.mjs`; the run fails until you do.
 
 ### The exterior zone's façade skins
 
-The exterior zone also owns the outer skin of every elevation, as flat bands **2 m thick standing outside the building line**, y from 0 to 42. These live in free air, so they overlap no interior box:
+The exterior zone also owns the outer skin of every elevation, as flat bands **2 m thick standing outside the building line**, y from 0 to 42. These live in free air, so they overlap no interior volume:
 
 | skin | band |
 | --- | --- |
@@ -82,15 +97,15 @@ The exterior zone also owns the outer skin of every elevation, as flat bands **2
 | Colonnade (Sully east) | x = +276 … +278, z = −91.5 … +91.5 |
 | Cour Napoléon east return (Sully west wing, outside face) | x = +114 … +116, z = −70.5 … +70.5 |
 
-The interior zones build their walls from inside; the exterior zone builds from outside. Both surfaces exist in the real building (they are the two faces of the same masonry), so the 0.6 m of wall between them is simply not claimed by anyone. That is deliberate.
+The interior zones build their walls from inside; the exterior zone builds from outside. Both surfaces exist in the real building (they are the two faces of the same masonry), so the 0.6 m between them is claimed by neither. That is deliberate.
 
 ## 4. Rules the boxes imply
 
-1. **No zone builds above y = 20.4 except `exterior-wings`.** The pyramid is the one exception and it belongs to `pyramid-courtyard`.
-2. **`exterior-wings` builds nothing below y = 20.4** except the four façade skins and the ground-level porch steps. Cornices, balustrades and roof ornaments belong to it; everything from the plinth up to the cornice belongs to the corresponding interior zone, which renders the inside face.
+1. **Roof surfaces and façade skins belong to `exterior-wings`. Interior volumes do not stop at the cornice** — a room may rise into the roof as its own architecture requires, up to the ridge at 28.7 m. The exterior owns the surface above it; the interior owns the volume below it. The two are the two sides of one roof and are not competing for the same space.
+2. **`exterior-wings` builds no solid volume**, only skins: roof planes, dormers, chimney stacks, balustrades, cornices and the four façade bands. Nothing below the cornice except those bands. The pyramid at 21.7 m is the one object above the cornice line that belongs to `pyramid-courtyard`, because nothing covers it.
 3. **The Cour Carrée pavement and the Cour Napoléon pavement belong to `pyramid-courtyard` and `sully-interior` respectively.** The Sully zone owns the court because its four inner façades are its walls; the pyramid zone owns the Cour Napoléon because the pyramid and the Carrousel are there.
 4. **The Hall Napoléon and the two undercroft links belong to `pyramid-courtyard`**, even though `route.json` files them as rooms. Rooms and zones are different taxonomies: a room says what the visitor is in, a zone says whose thread builds it.
-5. **The three glazed courtyards belong to `richelieu-interior`**, roof glass included, from y = −9.5 up to the top of the vault at about 20 m. They are interiors with skylights, not outdoor courts.
+5. **The three glazed courtyards belong to `richelieu-interior`**, roof glass included, from y = −9.5 up to the apex of each vault at 24–26.4 m. They are interiors with skylights, not outdoor courts, and they are why the Richelieu volume reaches most of the way to the ridge.
 
 ## 5. Room-to-zone ownership
 
@@ -107,7 +122,7 @@ The interior zones build their walls from inside; the exterior zone builds from 
 
 `node validate.mjs` in this directory checks, against the boxes above:
 
-1. that no two zone boxes overlap in three axes;
+1. that no two **volume** zone boxes overlap in three axes, and that no interior volume exceeds the ridge at 28.7 m (the exterior skin is a surface envelope and is not compared, by design);
 2. that every room's footprint sits inside its declared zone box;
 3. that every portal is reciprocal (the graph is undirected);
 4. that every room is reachable from the Cour Napoléon;
@@ -118,3 +133,5 @@ The interior zones build their walls from inside; the exterior zone builds from 
 9. **that every portal sits on a real wall** — two rooms must share a boundary segment (within one metre, for wall thickness), or, for a vertical link only, overlap in plan on different floors. A portal to nowhere fails the run. This is the check that would have caught `galerie-apollon`↔`pavillon-horloge` and `salle-des-caryatides`↔`salle-grec-346` before the Sully zone found them against the geometry.
 
 A clean run is part of the spec being usable: if you change a footprint, run it.
+
+10. that every room reaching above the 20.4 m cornice is listed in the `HEADROOM` set in `validate.mjs` and in the table above, so a new one cannot slip through unannounced.

@@ -1488,7 +1488,7 @@
         -1
       ],
       "floorY": 0.0,
-      "clearHeight_m": 20.0,
+      "clearHeight_m": 26.4,
       "footprint": {
         "x": [
           -84.0,
@@ -1508,8 +1508,9 @@
       },
       "ceiling": {
         "type": "glazed-skylight",
-        "height_m": 20.0,
-        "notes": "Pei/Macary shallow vault on steel tubes, propped off the old cornices, 7 m of rise above the cornice line and no higher, so it stays behind the Rivoli roofline. Aluminium louvers below the glass diffuse the light."
+        "height_m": 26.4,
+        "notes": "Pei/Macary shallow vault on steel tubes, propped off the old cornices, 7 m of rise above the cornice line and no higher, so it stays behind the Rivoli roofline. The vault apex is estimated at 26.4 m above the courtyard, about 6 m over the 20.4 m cornice, which is the structural record's stated limit for the whole glazing scheme.",
+        "vaultApex_m": 26.4
       },
       "floorMaterial": "floor.marble-checker",
       "wallColour": "wall.ochre-light",
@@ -1536,7 +1537,7 @@
         -1
       ],
       "floorY": -4.5,
-      "clearHeight_m": 18.0,
+      "clearHeight_m": 30.9,
       "footprint": {
         "x": [
           -16.0,
@@ -1556,8 +1557,9 @@
       },
       "ceiling": {
         "type": "glazed-skylight",
-        "height_m": 18.0,
-        "notes": "Same vault system as Marly, with openable smoke vents under the eaves."
+        "height_m": 30.9,
+        "notes": "Same vault system as Marly, with openable smoke vents under the eaves. The vault apex is estimated at 26.4 m above the courtyard, about 6 m over the 20.4 m cornice, which is the structural record's stated limit for the whole glazing scheme.",
+        "vaultApex_m": 26.4
       },
       "floorMaterial": "floor.marble-checker",
       "wallColour": "wall.ochre-light",
@@ -1588,7 +1590,7 @@
         0
       ],
       "floorY": 0.0,
-      "clearHeight_m": 12.0,
+      "clearHeight_m": 24.0,
       "footprint": {
         "x": [
           34.0,
@@ -1608,8 +1610,9 @@
       },
       "ceiling": {
         "type": "glazed-skylight",
-        "height_m": 12.0,
-        "notes": "Third of Pei's three courts; the roof here is lower than Marly's."
+        "height_m": 24.0,
+        "notes": "Third of Pei's three courts; the roof here is lower than Marly's. The vault apex is estimated at 24.0 m above the courtyard, about 6 m over the 20.4 m cornice, which is the structural record's stated limit for the whole glazing scheme.",
+        "vaultApex_m": 24.0
       },
       "floorMaterial": "floor.stone-flag",
       "wallColour": "wall.slate-green",
