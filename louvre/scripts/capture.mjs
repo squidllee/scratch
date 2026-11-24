@@ -44,7 +44,15 @@ const all = (name) => {
   return out;
 };
 
-const zone = String(flag('zone', 'example'));
+const zoneArg = flag('zone');
+const zonesFlag = flag('zones');
+/**
+ * `--zone museum` (or `--zones denon,sully`) loads the assembled scene: every wing in one room
+ * graph. A single `--zone` keeps the per-zone numbers honest and is what the zone threads used.
+ */
+const museum = zoneArg === 'museum' || zoneArg === 'all' || typeof zonesFlag === 'string';
+const zone = museum ? 'museum' : String(zoneArg ?? 'museum');
+const zoneList = typeof zonesFlag === 'string' ? String(zonesFlag) : null;
 const outDir = resolve(String(flag('out', 'captures')));
 const width = Number(flag('width', 1280));
 const height = Number(flag('height', 720));
@@ -224,7 +232,10 @@ async function main() {
   };
 
   const queryBase =
-    'zone=' + encodeURIComponent(zone) + (useEnv ? '&env=1' : '') + (extraQuery ? '&' + extraQuery : '');
+    (museum
+      ? 'zones=' + encodeURIComponent(zoneList ?? 'pyramid,exterior,denon,sully,richelieu')
+      : 'zones=' + encodeURIComponent(zone)) +
+    (useEnv ? '&env=1' : '') + (extraQuery ? '&' + extraQuery : '');
 
   if (captureAll) {
     const spawns = await (async () => {
@@ -234,11 +245,11 @@ async function main() {
     })();
     if (spawns.length === 0) console.warn('zone "' + zone + '" declared no spawn points');
     for (const id of spawns) {
-      await shoot(queryBase + '&spawn=' + encodeURIComponent(id), zone + '-' + id);
+      await shoot(queryBase + '&spawn=' + encodeURIComponent(id), zone + '-' + String(id).replace(/[^a-z0-9-]+/gi, '-'));
     }
   } else if (spawnFlags.length > 0) {
     for (const id of spawnFlags) {
-      await shoot(queryBase + '&spawn=' + encodeURIComponent(id), zone + '-' + id);
+      await shoot(queryBase + '&spawn=' + encodeURIComponent(id), zone + '-' + String(id).replace(/[^a-z0-9-]+/gi, '-'));
     }
   } else if (camera) {
     const q = queryBase + '&camera=' + encodeURIComponent(String(camera)) + '&look=' + encodeURIComponent(String(look));
@@ -265,7 +276,16 @@ async function main() {
 
   const collision = await page.evaluate(() => window.__test.collision());
   console.log('collision probes: ' + JSON.stringify(collision));
-  if (collision.noRooms) {
+  if (museum) {
+    const mustWalk = ['hallNapoleon', 'grandeGalerie', 'courMarly', 'pyramidInterior'];
+    const mustNot = ['beyondColonnade', 'offTheCarrousel', 'northOfRivoli', 'insideTheOuterWall'];
+    for (const key of mustWalk) {
+      if (collision[key] !== true) failures.push({ check: 'collision', value: collision[key], message: 'expected true at ' + key + ' — the walker cannot cross the palace' });
+    }
+    for (const key of mustNot) {
+      if (collision[key] !== false) failures.push({ check: 'collision', value: collision[key], message: 'expected false at ' + key + ' — the walker left the building' });
+    }
+  } else if (collision.noRooms) {
     failures.push({ check: 'collision', message: 'zone declared no rooms' });
   } else {
     for (const [name, ok] of Object.entries(collision)) {
@@ -319,7 +339,7 @@ async function main() {
   const scene = await page.evaluate(() => window.__test.structure());
   let structureReport = { checked: false, reason: 'not requested', specRoot: null };
   if (verify) {
-    structureReport = await verifyStructure(scene);
+    structureReport = await verifyStructure(scene, page);
   }
   const instanceCheck = checkInstances(scene, structureReport);
 
@@ -373,9 +393,17 @@ async function main() {
     if (!inst || inst.count === 0) {
       return { basis: 'none', count: 0, outside: 0, duplicates: 0 };
     }
-    const basis = structure.checked && structure.roomsExpected > 0 ? 'rooms' : 'bounds';
-    const outside = basis === 'rooms' ? inst.outsideRooms : inst.outsideBounds;
-    const result = { basis, count: inst.count, outside, duplicates: inst.duplicatePositions ?? 0 };
+    const basis = museum
+      ? 'per-zone'
+      : structure.checked && structure.roomsExpected > 0 ? 'rooms' : 'bounds';
+    const outside = basis === 'bounds' ? inst.outsideBounds : inst.outsideRooms;
+    const result = {
+      basis,
+      count: inst.count,
+      outside,
+      duplicates: inst.duplicatePositions ?? 0,
+      perZone: inst.perZone ?? null,
+    };
     if (outside > 0) {
       failures.push({
         check: 'instances',
@@ -443,13 +471,116 @@ async function main() {
     return found ? box : null;
   }
 
+  /**
+   * The assembled museum is checked against the whole spec, not one zone's slice of it: every room
+   * route.json names must exist in the union, every portal must land on a room some wing declares,
+   * and the tour must be routable through the real doorways. Those are the three failures a
+   * per-zone build cannot see.
+   */
+  async function verifyMuseum(scene, spec, page) {
+    const routeRooms = spec.route.rooms ?? [];
+    const declared = new Set(scene.rooms);
+    const missingRooms = routeRooms.filter((r) => !declared.has(r.id)).map((r) => r.id);
+    if (missingRooms.length) {
+      failures.push({
+        check: 'rooms', value: missingRooms.length, expected: routeRooms.length,
+        message: routeRooms.length + ' rooms in route.json, ' + missingRooms.length + ' not assembled: ' + missingRooms.join(', '),
+      });
+    }
+
+    const portals = scene.portals ?? {};
+    if ((portals.unresolved ?? []).length) {
+      failures.push({
+        check: 'portals', value: portals.unresolved.length,
+        message: 'portals opening onto a room no zone declares: ' +
+          portals.unresolved.map((p) => p.from + '->' + p.to + ' (' + p.zone + ')').join(', '),
+      });
+    }
+    if ((portals.oneWay ?? []).length) {
+      failures.push({
+        check: 'portals', value: portals.oneWay.length,
+        message: 'portals with no reciprocal: ' + portals.oneWay.map((p) => p.from + '->' + p.to).join(', '),
+      });
+    }
+    const specPortalCount = routeRooms.reduce((n, r) => n + (r.portals ?? []).length, 0);
+    if ((portals.portals ?? 0) < specPortalCount) {
+      failures.push({
+        check: 'portals', value: portals.portals, expected: specPortalCount,
+        message: 'the assembled graph has ' + portals.portals + ' portals; route.json declares ' + specPortalCount,
+      });
+    }
+
+    const tour = scene.tour ?? {};
+    if ((tour.unrouted ?? []).length) {
+      failures.push({
+        check: 'tour', value: tour.unrouted.length,
+        message: 'route legs with no doorway between them: ' + tour.unrouted.map((l) => l.from + '->' + l.to).join(', '),
+      });
+    }
+    if ((tour.unknownRooms ?? []).length) {
+      failures.push({
+        check: 'tour', value: tour.unknownRooms.length,
+        message: 'route rooms no zone built: ' + tour.unknownRooms.join(', '),
+      });
+    }
+    if ((scene.duplicateRooms ?? []).length || (scene.duplicateObjects ?? []).length) {
+      failures.push({
+        check: 'duplicates', value: (scene.duplicateRooms ?? []).length + (scene.duplicateObjects ?? []).length,
+        message: 'rooms declared by two wings, so one copy is never culled: ' +
+          [...(scene.duplicateRooms ?? []), ...(scene.duplicateObjects ?? [])].join('; '),
+      });
+    }
+
+    const doors = await page.evaluate(() => window.__test.doorWalk());
+    const blocked = doors.filter((d) => d.walkable === false || d.ok === false);
+    if (blocked.length) {
+      failures.push({
+        check: 'doors', value: blocked.length,
+        message: 'route doorways a visitor cannot stand in: ' +
+          blocked.map((d) => '#' + d.step + ' ' + d.room + '->' + (d.to ?? '?') + ' (' + (d.reason ?? 'not walkable') + ')').join(', '),
+      });
+    }
+
+    const expectedArtworks = (spec.artworks?.artworks ?? []).map((a) => a.id);
+    const present = new Set(scene.artworkIds);
+    const missingArtworks = expectedArtworks.filter((id) => !present.has(id));
+    if (missingArtworks.length) {
+      failures.push({
+        check: 'artworks', value: missingArtworks.length, expected: expectedArtworks.length,
+        message: 'artworks.json lists ' + expectedArtworks.length + ' works; not hung: ' + missingArtworks.join(', '),
+      });
+    }
+
+    return {
+      checked: true,
+      specRoot: spec.root,
+      scope: 'museum',
+      wings: scene.zones,
+      roomsExpected: routeRooms.length,
+      roomsDeclared: scene.rooms.length,
+      missingRooms,
+      portals: { declared: portals.portals, spec: specPortalCount, crossZone: (portals.crossZone ?? []).length },
+      tour: { waypoints: tour.waypoints, lengthM: tour.lengthM, unrouted: (tour.unrouted ?? []).length },
+      doorsChecked: doors.length,
+      doorsWalkable: doors.length - blocked.length,
+      artworksExpected: expectedArtworks.length,
+      artworksFound: expectedArtworks.length - missingArtworks.length,
+      missingArtworks,
+      library: scene.artworkLibrary,
+    };
+  }
+
   /** Structural asserts against the measured spec. */
-  async function verifyStructure(scene) {
+  async function verifyStructure(scene, page) {
+    const spec = await findSpec();
+    if (museum) {
+      if (!spec) return { checked: false, reason: 'no route.json found (pass --spec <dir>)' };
+      return verifyMuseum(scene, spec, page);
+    }
     const specZone = SPEC_ZONE[zone];
     if (!specZone) {
-      return { checked: false, reason: 'zone "' + zone + '" has no spec counterpart (proof gallery)' };
+      return { checked: false, reason: 'zone "' + zone + '" has no spec counterpart' };
     }
-    const spec = await findSpec();
     if (!spec) {
       return { checked: false, reason: 'no route.json found (pass --spec <dir> or merge louvre/docs/spec)' };
     }

@@ -1,5 +1,4 @@
 import type { AnyZoneId, ZoneContext, ZoneFactory, ZoneId } from './types';
-import { EXAMPLE_ZONE } from './types';
 
 /**
  * Zone registry.
@@ -13,7 +12,7 @@ type Module = { createZone: ZoneFactory };
 const modules = import.meta.glob<Module>('./*/index.ts');
 
 export const ZONE_IDS: ZoneId[] = ['pyramid', 'exterior', 'denon', 'sully', 'richelieu'];
-export const ALL_ZONE_IDS: AnyZoneId[] = [...ZONE_IDS, EXAMPLE_ZONE];
+export const ALL_ZONE_IDS: AnyZoneId[] = [...ZONE_IDS];
 
 export const ZONE_LABELS: Record<AnyZoneId, string> = {
   pyramid: 'Pyramide (Cour Napoléon)',
@@ -21,18 +20,12 @@ export const ZONE_LABELS: Record<AnyZoneId, string> = {
   denon: 'Denon wing',
   sully: 'Sully wing',
   richelieu: 'Richelieu wing',
-  example: 'Proof gallery',
 };
 
-/**
- * Zone id -> module key. The proof gallery lives in `_example/` (leading underscore keeps it out
- * of the zone-thread naming space), so an id may map to a differently named directory.
- */
+/** Zone id -> module key. `import.meta.glob` discovers every zone directory at build time. */
 export function moduleKey(id: string): string | undefined {
-  for (const candidate of [`./${id}/index.ts`, `./_${id}/index.ts`]) {
-    if (candidate in modules) return candidate;
-  }
-  return undefined;
+  const candidate = `./${id}/index.ts`;
+  return candidate in modules ? candidate : undefined;
 }
 
 export function zoneAvailable(id: string): boolean {

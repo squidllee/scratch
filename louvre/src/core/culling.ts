@@ -24,12 +24,12 @@ export interface RoomDef {
    * flat room. Supply a function for stairs, ramps, or a stepped dais: the walker asks this every
    * frame and puts the eye at `height + 1.65 m`, so the camera climbs the stair with you.
    */
-  floorAt?: (x: number, z: number) => number;
+  floorAt?: (x: number, z: number, eyeY?: number) => number;
 }
 
 /** The floor height the walker should stand on at (x, z), used by controls and probeable directly. */
-export function roomFloorAt(room: RoomDef, x: number, z: number): number {
-  return room.floorAt ? room.floorAt(x, z) : room.bounds.min[1];
+export function roomFloorAt(room: RoomDef, x: number, z: number, eyeY?: number): number {
+  return room.floorAt ? room.floorAt(x, z, eyeY) : room.bounds.min[1];
 }
 
 /**
@@ -48,20 +48,32 @@ export function roomFloorAt(room: RoomDef, x: number, z: number): number {
 export function pickFloorAt(rooms: readonly RoomDef[], x: number, z: number, eyeY: number): number {
   let below: number | null = null;
   let above: number | null = null;
+  // A stair you are standing on beats a flat floor over your head. The Hall Napoléon lies under
+  // the Cour Napoléon, and the courtyard's own floor is the highest surface at or below the eye, so
+  // without this the spiral down into the hall is unreachable: the eye can never fall below the
+  // pavement. A `floorAt` room is a deliberate walking surface, so within a step of the eye it wins.
+  let stair: number | null = null;
   for (const room of rooms) {
     const b = room.bounds;
     if (x < b.min[0] - 0.3 || x > b.max[0] + 0.3) continue;
     if (z < b.min[2] - 0.3 || z > b.max[2] + 0.3) continue;
-    const h = roomFloorAt(room, x, z);
+    const h = roomFloorAt(room, x, z, eyeY);
+    if (room.floorAt && h <= eyeY + 0.5 && eyeY - h <= STAIR_STEP_DOWN) {
+      if (stair === null || h > stair) stair = h;
+    }
     if (h <= eyeY + 0.001) {
       if (below === null || h > below) below = h;
     } else if (above === null || h < above) {
       above = h;
     }
   }
+  if (stair !== null) return stair;
   if (below !== null) return below;
   return above ?? 0;
 }
+
+/** How far below the eye a stair surface still counts as the floor being stood on. */
+const STAIR_STEP_DOWN = 3.5;
 
 export interface CullerOptions {
   /** Portal hops to follow from the camera's room. Defaults 2. */

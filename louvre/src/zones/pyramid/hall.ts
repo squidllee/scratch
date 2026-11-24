@@ -89,19 +89,20 @@ function squircle(angle: number, radius: number, power: number): THREE.Vector2 {
 }
 
 /**
+ * The spiral's plan and pitch. Exported because the assembly builds the walkable surface on top of
+ * this stone: a stair the camera cannot climb is a stair that does not exist on foot.
+ */
+export const SPIRAL = { outer: 15.1, width: 2.25, top: 0, bottom: HALL.floorY, turns: 1.25, power: 3.1 };
+
+/**
  * The stone spiral: 50 treads winding 1.25 turns from the entrance landing at courtyard level down
  * to the hall floor, with a parapet on the outside and a stringer on the inside. It hangs inside
  * the pyramid's footprint, so from the courtyard it is the thing you see through the glass.
  */
 function stoneSpiral(parent: THREE.Object3D): THREE.Vector3 {
-  const outer = 15.1;
-  const width = 2.25;
-  const yTop = 0;
-  const yBottom = HALL.floorY;
+  const { outer, width, top: yTop, bottom: yBottom, turns, power } = SPIRAL;
   const rise = 0.18;
   const steps = Math.round((yTop - yBottom) / rise);
-  const turns = 1.25;
-  const power = 3.1;
   const stone = mat('stone.limestone-warm');
 
   const samples = 480;

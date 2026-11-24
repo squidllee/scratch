@@ -144,7 +144,7 @@ export const createZone = (ctx: ZoneContext): Zone => {
   // stair is one of the spec's invented rooms. The stair therefore keeps to the northern part of
   // its footprint (z -141 … -129) so the two cells never both claim a point.
   const escSouth = -129;
-  const escBase: Cell = { x0: escalier.x0, x1: escalier.x1, z0: escSouth, z1: escSouth - 2.5, floor: escalier.floor, ceil: escalier.ceil };
+  const escBase: Cell = { x0: escalier.x0, x1: escalier.x1, z0: escSouth - 2.5, z1: escSouth, floor: escalier.floor, ceil: escalier.ceil };
   const escLanding: Cell = { x0: escalier.x0, x1: escalier.x1, z0: escalier.z0, z1: -139.5, floor: 7, ceil: escalier.ceil };
   const escFlight = flightUp('escalier-richelieu-flight', -8, 2, -131.5, -139.5, escalier.floor, 7, 6, escalier.ceil);
 

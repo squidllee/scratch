@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { RendererStats } from './renderer';
 import { textureStats } from './textures';
+import { textureBytes as artworkTextureBytes, textureLedger } from '../artworks';
 import { materialCacheSize } from './materials';
 import { cullerInfo } from './culling';
 
@@ -74,13 +75,18 @@ export class PerfHud {
 
   snapshot(): Stats {
     const textures = textureStats();
+    // `core/textures.ts` counts the shared tile canvases. The artwork canvases are painted by the
+    // artworks library through its own ledger, so a scene carrying 28 real paintings reported 8 MB
+    // while holding 25. Both ledgers, or the number is a lie.
+    const bytes = textures.bytes + artworkTextureBytes();
+    const artworkTextures = (): number => textureLedger().length;
     const cells = cullerInfo.active;
     return {
       fps: Math.round(this.fps * 10) / 10,
       drawCalls: this.stats.drawCalls,
       triangles: this.stats.triangles,
-      textureMB: Math.round((textures.bytes / (1024 * 1024)) * 100) / 100,
-      textures: textures.count,
+      textureMB: Math.round((bytes / (1024 * 1024)) * 100) / 100,
+      textures: textures.count + artworkTextures(),
       materials: materialCacheSize(),
       cells,
       cellReason: cullerInfo.reason,

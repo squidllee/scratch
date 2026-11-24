@@ -8,10 +8,7 @@ import type { AtmosphereSpec } from '../core/atmosphere';
 /** The five zone ids. Fixed: the registry and the tour reference them by name. */
 export type ZoneId = 'pyramid' | 'exterior' | 'denon' | 'sully' | 'richelieu';
 
-/** The proof gallery. Ships with the foundation and is expected to be deleted at integration. */
-export const EXAMPLE_ZONE = 'example';
-
-export type AnyZoneId = ZoneId | typeof EXAMPLE_ZONE;
+export type AnyZoneId = ZoneId;
 
 export interface ZoneContext {
   /** Seeded stream for the zone. `ctx.rng()` is stable for this zone id across runs. */
