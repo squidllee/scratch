@@ -71,6 +71,7 @@ export interface Zone {
   group: THREE.Group;                 // your merged geometry
   roomGroups: Map<string, THREE.Object3D>;  // REQUIRED: per-room sub-groups, for culling (§5)
   spawnPoints: SpawnPoint[];          // named viewpoints; also the guided-tour order
+  atmosphere?: AtmosphereSpec;        // sky + fog while the camera is in this zone (§6)
   update?(dt: number, camera: THREE.Camera): void; // optional per-frame work
   dispose(): void;                    // release every geometry you allocated
 }
@@ -129,6 +130,11 @@ Rules that make the vocabulary compose:
   whose bay centres match the openings for frames and glass.
 - **Meshes face +Z.** Rotate about Y to face the other way (`Math.PI` faces −Z, `±Math.PI/2` faces
   ±X). A cornice `rotation.y = Math.PI` runs along the same axis but protrudes −Z.
+- **Merging bakes world transforms.** `mergeByMaterial()` folds each child's world matrix into the
+  merged geometry, and for an `InstancedMesh` it bakes it into every instance matrix. So you can
+  position a row of windows inside a placed group and merge afterwards; the row lands where you put
+  it. `--verify` fails if any instance ends up outside every room box, which is what a dropped
+  group transform looks like.
 - **AO is baked, so put geometry where it is seen.** Nothing casts realtime shadows; the darkness
   under a cornice, at the foot of a wall, and in the corner of a room comes from the vertex colours
   the builders write. Keep the pieces you build; do not fake shadow planes.
@@ -172,6 +178,22 @@ const rooms: RoomDef[] = [
 - Where a wall is thick, add a thin **threshold room** spanning the opening (`bounds` across the
   wall, `width` = the doorway) with portals on both sides. That is how collision keeps a wall solid
   while letting you walk through the door. See `threshold-east` in `src/zones/_example/`.
+- **Floors and stairs.** `bounds.min[1]` is the walking surface of a flat room. For stairs, a ramp,
+  or a stepped dais, give that room a `floorAt(x, z)` function returning the height at that point;
+  the walker calls it every frame and puts the eye at `height + 1.65 m`, so the camera climbs with
+  you. **Vertical movement is never a zone's job** — a zone that moves the camera in `update()`
+  fights the walker and loses. `--verify` probes `floorAt` with a synthetic ramp and fails if the
+  walker does not read it.
+
+```ts
+{ id: 'escalier-daru', bounds: {...},
+  floorAt: (x, z) => {
+    // a straight flight climbing in +Z inside the room
+    const t = Math.min(1, Math.max(0, (z - 118) / 9));
+    return 7 + t * 4.2;
+  },
+  portals: [...] }
+```
 - The engine renders the camera's room plus rooms reached through visible portals up to two hops,
   and falls back to distance culling when the camera is outside every room (exterior views).
 
@@ -200,7 +222,23 @@ draw-call budget real: the engine sets `visible` per room group, so a room behin
 nothing. A zone that returns its geometry as one block cannot be culled, and the type will not let
 you ship it that way.
 
-## 6. Materials
+## 6. Atmosphere
+
+Sky and fog are per zone, because Paris daylight outdoors and the dark interior falloff cannot be
+one global setting. Declare it on the zone and the engine applies it while one of your rooms is the
+camera's cell, restoring the default when the camera leaves:
+
+```ts
+atmosphere: {
+  background: 'context.sky-day',           // palette name or 0x hex
+  fog: { color: 'context.sky-day', density: 0.0011 },   // null disables fog for this zone
+}
+```
+
+Do **not** set `scene.fog` or `scene.background` yourself, and do not reach the scene through
+`group.parent`: with two zones loaded that silently wins or loses by load order.
+
+## 7. Materials
 
 Every colour comes from `src/core/palette.ts`, which is generated from the measured
 `palette.json` (56 semantic names, grouped):
@@ -216,12 +254,17 @@ gold.leaf  gold.bronze-tarnished  glass.skylight-clear  glass.vitrine  glass.pyr
 wood.oak  wood.walnut  wood.gilt-frame  context.zinc-roof  context.seine-water  ...
 ```
 
+Metals outdoors: the palette's metalness (zinc 0.6, gold 0.85) assumes interior lighting. With no
+environment map in the scene a high-metalness surface has nothing to reflect and renders black, so
+the exterior uses `outdoorMat('context.zinc-roof')` — same colour and texture, metalness 0.08.
+Never clone and mutate a cached material; pass an override instead (`mat(name, { metalness: 0.1 })`).
+
 Use `mat('wall.red-madder')` to get the cached material, and the same string in `addPart(..., name)`.
 Never construct a `MeshStandardMaterial` inline: each unique material is a state change, and the
 per-material merge depends on names being stable. `palette.json` also names four base materials per
 zone (`zones.denon` etc.) — those are your defaults.
 
-## 7. Determinism
+## 8. Determinism
 
 All variation comes from `ctx.rng(label)`:
 
@@ -234,7 +277,7 @@ const jitter = r.range(-0.02, 0.02);    // also r.int, r.chance, r.pick, r.gauss
 `http(s)` URL in `src/`, and on any image/font/model import. Two builds of the same scene must be
 pixel-identical.
 
-## 8. Artworks
+## 9. Artworks
 
 An artwork is **data plus a factory**. You place artworks by id; you never model one.
 
@@ -258,7 +301,7 @@ Artwork data for the whole museum is in `handoffs/louvre/spec/artworks.json` (28
 If no factory is registered for an id you get a correctly-sized gilt frame with a blank canvas, so
 your room can be verified before the artwork library lands.
 
-## 9. Budget
+## 10. Budget
 
 Per zone, measured with the capture harness on the built scene:
 
@@ -272,7 +315,7 @@ Per zone, measured with the capture harness on the built scene:
 How to hit them: merge per room per material, instance anything repeated more than about 30 times,
 prefer texture detail over triangle detail, and delete ornament you cannot see from any spawn point.
 
-## 10. Verify yourself
+## 11. Verify yourself
 
 ```bash
 cd louvre
@@ -298,6 +341,12 @@ when:
   exist in `zone.rooms`; the zone's geometry bounds must sit inside the box `coordinates.md` assigns
   it (tolerance `--bbox-tolerance`, default 3 m); and every artwork `artworks.json` assigns to those
   rooms must be in the scene graph (name it through `placeArtwork`, which tags `userData.artworkId`).
+
+Raycast probe: `--probe` fires a ray from every spawn point along its sight line and reports the
+object and material it hits. Pixel statistics cannot tell a correct wall from a window row hung on
+the wrong surface; a hit test can. Use `--expect-material wall.red-madder` to assert what a zone's
+spawns should be looking at, and read `probe` in the report when a shot looks plausible but the
+geometry is misplaced.
 
 Then read `captures/capture-report.json`. It contains, per screenshot, `drawCalls`, `triangles`,
 `textureMB`, `cells`, plus zone-agnostic collision probes and any console errors. A run with console

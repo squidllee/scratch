@@ -155,6 +155,21 @@ export function mat(name: MaterialName, override: Partial<MaterialSpec> = {}): T
   return material;
 }
 
+/**
+ * Outdoor override for metals. The palette's metalness values (zinc 0.6, gold 0.85) are right under
+ * the museum's interior lighting, but with no environment map in the scene a high-metalness surface
+ * has almost nothing to reflect and renders black. The exterior zone uses these instead:
+ *
+ *   addPart(g, mansardRoof({...}), 'context.zinc-roof')   // interior
+ *   mesh.material = outdoorMat('context.zinc-roof')       // exterior
+ */
+export const OUTDOOR_METAL: Partial<MaterialSpec> = { metalness: 0.08, roughness: 0.62 };
+
+/** A metal material tuned for an exterior with no environment map. Cached like any other. */
+export function outdoorMat(name: MaterialName, extra: Partial<MaterialSpec> = {}): THREE.MeshStandardMaterial {
+  return mat(name, { ...OUTDOOR_METAL, ...extra });
+}
+
 /** Flat-shaded variant, for carved ornament where facets read as chisel work. */
 export function flatMat(name: MaterialName, override: Partial<MaterialSpec> = {}): THREE.MeshStandardMaterial {
   return mat(name, { flatShading: true, roughness: 0.9, ...override });

@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { EngineRenderer } from './core/renderer';
 import { PerfHud } from './core/perf';
 import { Controls, type ControlMode, type TourWaypoint } from './core/controls';
-import { RoomCuller, cullerInfo } from './core/culling';
+import { RoomCuller, cullerInfo, roomFloorAt, type RoomDef } from './core/culling';
+import { AtmosphereManager } from './core/atmosphere';
 import { rng } from './core/rng';
 import { artworks } from './artworks/library';
 import { availableZones, loadZone, zoneAvailable } from './zones/registry';
@@ -64,6 +65,13 @@ const tourPath: TourWaypoint[] = spawns.length >= 2
       { position: [6, 1.65, 0], lookAt: [0, 2.4, -6] },
     ];
 
+const atmosphere = new AtmosphereManager(engine.scene);
+const zoneAtmospheres = new Map<string, import('./core/atmosphere').AtmosphereSpec | undefined>();
+if (zone) zoneAtmospheres.set(zone.id, zone.atmosphere);
+const roomToZone = new Map<string, string>();
+if (zone) for (const room of zone.rooms) roomToZone.set(room.id, zone.id);
+let appliedZone: string | null = null;
+
 const culler = new RoomCuller(rooms, { depth: Number(params.get('depth') ?? 2) });
 const roomObjects = new Map<string, THREE.Object3D>();
 if (zone?.roomGroups) {
@@ -118,6 +126,13 @@ engine.onFrame((dt) => {
     if (roomObjects.size) culler.apply(roomObjects, result);
     cullerInfo.active = result.active;
     cullerInfo.reason = result.reason;
+    // Atmosphere follows the camera's zone: the exterior's daylight and the interior's dark fog
+    // cannot share one scene setting, so whichever zone owns the current cell wins.
+    const activeZoneId = (result.cameraRoom ? roomToZone.get(result.cameraRoom) : undefined) ?? zoneId;
+    if (activeZoneId !== appliedZone) {
+      appliedZone = activeZoneId;
+      atmosphere.apply(zoneAtmospheres.get(activeZoneId));
+    }
   }
   return moved;
 });
@@ -181,6 +196,7 @@ const structure = (): {
   spawns: string[];
   bounds: { min: [number, number, number]; max: [number, number, number] } | null;
   artworkIds: string[];
+  instances: { count: number; outsideRooms: number };
   drawCalls: number;
   triangles: number;
 } => {
@@ -189,6 +205,35 @@ const structure = (): {
     const id = o.userData?.artworkId;
     if (typeof id === 'string') artworkIds.push(id);
   });
+
+  // Instances are the one transform an agent cannot check by reading code: a merged InstancedMesh
+  // whose group transform was dropped still draws, just somewhere it does not belong.
+  const instances = { count: 0, outsideRooms: 0 };
+  if (zone) {
+    zone.group.updateMatrixWorld(true);
+    const m = new THREE.Matrix4();
+    const v = new THREE.Vector3();
+    const within = (p: THREE.Vector3): boolean =>
+      rooms.some((room) => {
+        const b = room.bounds;
+        const pad = 8;
+        return (
+          p.x >= b.min[0] - pad && p.x <= b.max[0] + pad &&
+          p.y >= b.min[1] - pad && p.y <= b.max[1] + pad &&
+          p.z >= b.min[2] - pad && p.z <= b.max[2] + pad
+        );
+      });
+    zone.group.traverse((o) => {
+      const im = o as THREE.InstancedMesh;
+      if (!im.isInstancedMesh) return;
+      for (let i = 0; i < im.count; i++) {
+        im.getMatrixAt(i, m);
+        v.setFromMatrixPosition(m).applyMatrix4(im.matrixWorld);
+        instances.count++;
+        if (!within(v)) instances.outsideRooms++;
+      }
+    });
+  }
   let bounds: { min: [number, number, number]; max: [number, number, number] } | null = null;
   if (zone) {
     const box = new THREE.Box3().setFromObject(zone.group);
@@ -205,6 +250,7 @@ const structure = (): {
     spawns: spawns.map((s) => s.id),
     bounds,
     artworkIds,
+    instances,
     drawCalls: engine.stats.drawCalls,
     triangles: engine.stats.triangles,
   };
@@ -234,6 +280,46 @@ const collisionProbes = (): Record<string, boolean> => {
   rooms: rooms.map((r) => r.id),
   pixelStats,
   structure,
+  /**
+   * Raycast from every spawn point along its sight line and report the nearest surface. Pixel
+   * statistics cannot tell a wall from a window frame hung on the wrong wall; geometry can.
+   */
+  probe: (maxDistance = 120) => {
+    const raycaster = new THREE.Raycaster();
+    raycaster.far = maxDistance;
+    const out: Array<Record<string, unknown>> = [];
+    const origin = new THREE.Vector3();
+    for (const s of spawns) {
+      origin.set(s.position[0], s.position[1], s.position[2]);
+      const dir = new THREE.Vector3(s.lookAt[0], s.lookAt[1], s.lookAt[2]).sub(origin).normalize();
+      raycaster.set(origin, dir);
+      const hits = zone ? raycaster.intersectObject(zone.group, true) : [];
+      const hit = hits[0];
+      const mesh = hit?.object as THREE.Mesh | undefined;
+      const raw = mesh ? (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) : null;
+      out.push({
+        spawn: s.id,
+        object: hit ? hit.object.name || '(unnamed)' : null,
+        material: raw ? raw.name || '(unnamed)' : null,
+        distance: hit ? Math.round(hit.distance * 100) / 100 : null,
+      });
+    }
+    return out;
+  },
+  /**
+   * Prove the floor plumbing without touching the scene: a synthetic ramp room must report the
+   * height its function returns, and a flat room must report its own floor level.
+   */
+  floorProbe: () => {
+    const ramp: RoomDef = { id: 'probe-ramp', bounds: { min: [0, 0, 0], max: [4, 3, 6] }, floorAt: (_x, z) => z * 0.5 };
+    const flat: RoomDef = { id: 'probe-flat', bounds: { min: [0, 3, 0], max: [4, 6, 6] } };
+    return {
+      rampAtStart: roomFloorAt(ramp, 1, 0),
+      rampAtEnd: roomFloorAt(ramp, 1, 6),
+      flat: roomFloorAt(flat, 1, 3),
+      atSpawn: controls.floorAt(spawn.position[0], spawn.position[2]),
+    };
+  },
   setCamera: (p: [number, number, number], l: [number, number, number]) => controls.setCamera(p, l),
   tourProgress: (seconds: number) => controls.tourProgressAfter(seconds),
 };

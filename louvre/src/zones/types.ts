@@ -3,6 +3,7 @@ import type { RoomDef } from '../core/culling';
 import type { SpawnPoint } from '../core/controls';
 import type { Rng } from '../core/rng';
 import type { ArtworkLibrary } from '../artworks/types';
+import type { AtmosphereSpec } from '../core/atmosphere';
 
 /** The five zone ids. Fixed: the registry and the tour reference them by name. */
 export type ZoneId = 'pyramid' | 'exterior' | 'denon' | 'sully' | 'richelieu';
@@ -39,6 +40,12 @@ export interface Zone {
   roomGroups: Map<string, THREE.Object3D>;
   /** Named viewpoints. The tour and the capture harness address these by id. */
   spawnPoints: SpawnPoint[];
+  /**
+   * Sky and fog while the camera is in this zone. The engine applies it when one of your rooms is
+   * the camera's cell and restores the engine default when you leave. Do not touch `scene.fog`
+   * or `scene.background` yourself.
+   */
+  atmosphere?: AtmosphereSpec;
   /** Optional per-frame work (animated water, flickering light, exhibit turntables). */
   update?(dt: number, camera: THREE.PerspectiveCamera): void;
   /** Release every geometry and texture this zone allocated. */

@@ -58,6 +58,8 @@ const tourSeconds = Number(flag('tour', 0));
 const label = flag('name');
 const extraQuery = flag('query', '');
 const verify = Boolean(flag('verify', false));
+const runProbe = Boolean(flag('probe', false));
+const expectMaterial = flag('expect-material');
 const bboxTolerance = Number(flag('bbox-tolerance', 3));
 
 /** Pixel verdict floors. Calibrated on the proof gallery: mean 78-85, std 38-42, ~25k colours. */
@@ -185,6 +187,7 @@ async function main() {
 
   const failures = [];
   const shots = [];
+  let probeReport = [];
   const shoot = async (query, name) => {
     const url = base + '/?' + query;
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -265,7 +268,39 @@ async function main() {
     }
   }
 
+  // Floor plumbing: a room's floorAt function must win over its bounds, and a flat room must
+  // report its own level. This is what makes stairs walkable without a zone moving the camera.
+  const floorProbe = await page.evaluate(() => window.__test.floorProbe());
+  console.log('floor probe: ' + JSON.stringify(floorProbe));
+  if (Math.abs(floorProbe.rampAtStart) > 1e-6 || Math.abs(floorProbe.rampAtEnd - 3) > 1e-6 || Math.abs(floorProbe.flat - 3) > 1e-6) {
+    failures.push({ check: 'floor', value: floorProbe, message: 'room floorAt() is not what the walker reads' });
+  }
+
+  if (runProbe || verify) {
+    const probeDistance = Number(flag('probe-distance', 150));
+    const hits = await page.evaluate((d) => window.__test.probe(d), probeDistance);
+    for (const h of hits) {
+      console.log('probe ' + h.spawn + ': ' + (h.object ?? 'NOTHING within ' + probeDistance + ' m') +
+        (h.material ? ' / ' + h.material : '') + (h.distance !== null ? ' @ ' + h.distance + ' m' : ''));
+      if (h.object === null) {
+        failures.push({ check: 'probe', shot: h.spawn, message: 'sight line from this spawn hits nothing within ' + probeDistance + ' m; the camera looks into empty space' });
+      } else if (typeof expectMaterial === 'string' && h.material !== expectMaterial) {
+        failures.push({ check: 'probe', shot: h.spawn, value: h.material, expected: expectMaterial,
+          message: 'expected the sight line to land on "' + expectMaterial + '"' });
+      }
+    }
+    probeReport = hits;
+  }
+
   const scene = await page.evaluate(() => window.__test.structure());
+  if (scene.instances && scene.instances.outsideRooms > 0) {
+    failures.push({
+      check: 'instances',
+      value: scene.instances,
+      message: scene.instances.outsideRooms + ' of ' + scene.instances.count +
+        ' instances sit outside every room box; a merged InstancedMesh probably lost its group transform',
+    });
+  }
   let structureReport = { checked: false, reason: 'not requested', specRoot: null };
   if (verify) {
     structureReport = await verifyStructure(scene);
@@ -284,7 +319,8 @@ async function main() {
     verified: verify,
     shots: shots.map((s) => ({ file: s.file, stats: s.stats, pixels: s.pixels })),
     collision,
-    structure: { rooms: scene.rooms, bounds: scene.bounds, artworkIds: scene.artworkIds },
+    probe: probeReport,
+    structure: { rooms: scene.rooms, bounds: scene.bounds, artworkIds: scene.artworkIds, instances: scene.instances },
     structureCheck: structureReport,
     failures,
     consoleErrors,
