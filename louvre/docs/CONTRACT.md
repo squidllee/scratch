@@ -1,0 +1,267 @@
+# Zone contract
+
+Read this before writing a line of code. It defines the interfaces, the coordinate frame, the
+geometry vocabulary, the material names, and the budget. Everything here is implemented in
+`src/core/` and typed in `src/zones/types.ts` — if this document and the code disagree, the code
+wins and the document is a bug.
+
+The proof gallery in `src/zones/_example/` is a complete, working implementation of this contract.
+Read it after this file.
+
+---
+
+## 1. Coordinate frame
+
+One world, metres, right-handed.
+
+| item | value |
+| --- | --- |
+| Unit | metre |
+| Origin | centre of the square base of the Glass Pyramid, at Cour Napoléon paving level |
+| +X | east, toward the Cour Carrée |
+| +Y | up |
+| +Z | south, toward the Seine (so north is −Z) |
+| Cour Napoléon ground | y = 0 |
+| Level −1 (Hall Napoléon) | y = −9.0 |
+| Level 1 (painting floors) | y = +7.0 |
+| Cornice | y = +20.4 |
+
+Your zone box, from the measured spec (`handoffs/louvre/spec/coordinates.md`). Build inside it and
+nowhere else; two zone boxes may not overlap in all three axes.
+
+| zone id (folder) | x | y | z |
+| --- | --- | --- | --- |
+| `pyramid` | −236 … +116 | −9.5 … 21.7 | −70.5 … +70.5 |
+| `denon` | −172 … +116 | −9.5 … 20.4 | +70.5 … +154 |
+| `richelieu` | −84 … +116 | −9.5 … 20.4 | −141 … −70.5 |
+| `sully` | +116 … +276 | −9.5 … 20.4 | −91.5 … +154 |
+| `exterior` | the roof boxes and the four 2 m façade skins (see coordinates.md §3) | 20.4 … 42 | per box |
+
+The palace is deliberately **orthogonalised**: the real building bends about 6° between court axes.
+Build everything on the axis-aligned boxes above.
+
+## 2. Where your code lives
+
+```
+louvre/src/zones/<id>/index.ts     <- the only entry point the registry looks for
+louvre/src/zones/<id>/*.ts         <- any helpers you like
+louvre/src/artworks/<name>/*.ts    <- only if you own the artwork library
+```
+
+You never edit `src/core/`, `src/main.ts`, `src/zones/registry.ts`, `src/zones/types.ts`, or another
+zone's directory. The registry discovers zones with `import.meta.glob('./*/index.ts')`, so **adding
+your folder registers your zone**. Nothing to wire up, nothing to conflict with.
+
+## 3. The `Zone` interface
+
+```ts
+import type { Zone, ZoneContext } from '../types';
+
+export const createZone = (ctx: ZoneContext): Zone => { /* ... */ };
+
+export interface ZoneContext {
+  rng: (label?: string) => Rng;       // seeded, deterministic; fork by label
+  artworks: ArtworkLibrary;           // factories looked up by artwork id
+  pixelRatio: number;                 // renderer DPR cap (for LOD decisions)
+}
+
+export interface Zone {
+  id: AnyZoneId;                      // 'denon' | 'sully' | ...
+  rooms: RoomDef[];                   // walkable cells + portals (see §5)
+  group: THREE.Group;                 // your merged geometry
+  roomGroups?: Map<string, THREE.Object3D>; // per-room sub-groups, for culling (§5)
+  spawnPoints: SpawnPoint[];          // named viewpoints; also the guided-tour order
+  update?(dt: number, camera: THREE.Camera): void; // optional per-frame work
+  dispose(): void;                    // release every geometry you allocated
+}
+
+export interface SpawnPoint {
+  id: string;                         // 'grande-galerie-west'
+  position: readonly [number, number, number];  // eye position, world metres
+  lookAt: readonly [number, number, number];
+  label?: string;
+}
+```
+
+Spawn point ids are used by the capture harness (`--spawn <id>`) and by the tour, so name them the
+way a curator would: `salon-carre-east`, `grande-galerie-west`, `escalier-daru-base`.
+
+## 4. Building geometry: the shared vocabulary
+
+Every builder takes real dimensions in metres and returns either a `BufferGeometry` or, for the two
+multi-material cases, a `BuildParts` record keyed by palette name. All of them bake ambient occlusion
+into a `color` attribute and emit UVs in metres, so nothing needs texture setup.
+
+```ts
+import { addPart, addParts, mergeByMaterial } from '../../core/merge';
+import {
+  wall, floor, ceiling, cofferCeiling, cornice, moulding, baseboard,
+  column, pilaster, arcade, windowRow, mansardRoof, skylight, staircase,
+  balustrade, doorway, arch, pictureFrame, parquet,
+} from '../../core/builders';
+```
+
+| builder | builds along | origin / base | returns |
+| --- | --- | --- | --- |
+| `wall({length, height, thickness?, openings?})` | X | base y=0, straddles z=0 | geometry |
+| `floor({width, depth, thickness?})` | XZ | walking surface at y=0 | geometry |
+| `ceiling({width, depth, beams?})` | XZ | finished face at y=0 | geometry |
+| `cofferCeiling({width, depth, baysX?, baysZ?, rosettes?})` | XZ | lowest plane at y=−beamDepth | geometry |
+| `cornice({length, height?, projection?, dentils?})` | X | base y=0, out along +Z | geometry |
+| `moulding({length, profile})` | X | profile `[outward, up]` from y=0 | geometry |
+| `baseboard({length, height?, thickness?})` | X | base y=0, out along +Z | geometry |
+| `parquet({width, depth, border?, crossBands?})` | XZ | surface at y=0 | geometry |
+| `column({height, radius, order})` | Y | base y=0 | geometry |
+| `pilaster({width, height, depth?})` | Y | base y=0, faces +Z | geometry |
+| `arcade({bays, bayWidth, height, pierWidth?})` | X | base y=0, straddles z=0 | geometry |
+| `windowRow({bays, bayWidth, spacing?, sillHeight, headHeight, mullions?})` | X | base y=0, plane z=0 | **BuildParts** (frames instanced + glass) |
+| `skylight({width, depth, bars?, frameWidth?})` | XZ | sits from y=0 down to −0.16 | **BuildParts** |
+| `staircase({steps, rise, run, width})` | +Z rising | first riser at y=0 | geometry |
+| `balustrade({length, height?, spacing?})` | X | base y=0 | geometry |
+| `doorway({width, height, thickness?, arched?})` | X | XY plane, base y=0, faces +Z | geometry (*casing*, not a hole) |
+| `arch({span, band?, thickness?})` | XY | springs at y=0 | geometry |
+| `pictureFrame({width, height, borderWidth?, depth?, canvas?})` | XY | centred on origin, faces +Z | **BuildParts** (gilt + optional canvas) |
+
+Rules that make the vocabulary compose:
+
+- **A wall opening is a hole.** `wall({openings: [{x, width, sill?, head, arched?}]})` triangulates
+  real holes. Put a `doorway()` casing in the hole for the dressed stone surround, and a `windowRow()`
+  whose bay centres match the openings for frames and glass.
+- **Meshes face +Z.** Rotate about Y to face the other way (`Math.PI` faces −Z, `±Math.PI/2` faces
+  ±X). A cornice `rotation.y = Math.PI` runs along the same axis but protrudes −Z.
+- **AO is baked, so put geometry where it is seen.** Nothing casts realtime shadows; the darkness
+  under a cornice, at the foot of a wall, and in the corner of a room comes from the vertex colours
+  the builders write. Keep the pieces you build; do not fake shadow planes.
+
+### Turning builders into a group
+
+```ts
+const raw = new THREE.Group();
+addPart(raw, parquet({ width: 40, depth: 12 }), 'floor.parquet-versailles');
+const w = addPart(raw, wall({ length: 44, height: 9, openings: [{ x: 0, width: 2.4, head: 4.2, arched: true }] }), 'wall.red-madder');
+w.position.set(0, 0, -6.3);
+addParts(raw, windowRow({ bays: 6, bayWidth: 2.4, spacing: 5.2, sillHeight: 1, headHeight: 6.6 })); // keys are palette names
+
+const { group } = mergeByMaterial(raw);   // one draw call per material
+```
+
+`mergeByMaterial` bakes each child's world transform and collapses everything into one mesh per
+material. Call it **once per room group**, not once per zone, so the culler can hide a room on its
+own.
+
+## 5. Rooms and portals
+
+```ts
+const rooms: RoomDef[] = [
+  {
+    id: 'grande-galerie',
+    bounds: { min: [-86, 7, 70.5], max: [116, 20.4, 84] },   // interior surfaces
+    portals: [
+      { to: 'salon-carre', centre: [116, 12, 77], width: 3.2, height: 5.4, normal: [1, 0, 0] },
+    ],
+  },
+];
+```
+
+- `bounds` are the **interior** faces: floor y, wall x/z, ceiling y. The engine uses them for the
+  camera's cell and for walk collision, so they must cover every place a visitor can stand.
+- `portals` are **reciprocal**: A→B and B→A, both declared. One-way portals break the reachability
+  test in the spec validator and the culling BFS.
+- `normal` is optional; supply it. It tells the culler and the walker which face of the room the
+  opening is in.
+- Where a wall is thick, add a thin **threshold room** spanning the opening (`bounds` across the
+  wall, `width` = the doorway) with portals on both sides. That is how collision keeps a wall solid
+  while letting you walk through the door. See `threshold-east` in `src/zones/_example/`.
+- The engine renders the camera's room plus rooms reached through visible portals up to two hops,
+  and falls back to distance culling when the camera is outside every room (exterior views).
+
+Culling only works per room if you give the zone `roomGroups: Map<roomId, Object3D>`. A zone
+without it is drawn whole whenever any of its rooms is active.
+
+## 6. Materials
+
+Every colour comes from `src/core/palette.ts`, which is generated from the measured
+`palette.json` (56 semantic names, grouped):
+
+```
+wall.red-madder  wall.midnight-blue  wall.apollon-blue  wall.stone-grey
+floor.parquet-versailles  floor.marble-checker  floor.stone-flag  floor.pave-granite
+ceiling.plaster-white  ceiling.cream-cove  ceiling.gold-leaf  ceiling.glazed-skylight
+trim.gilt  trim.stone-limestone-warm  trim.marble-rouge  trim.wood-oak
+marble.blanc-carrare  marble.noir-marquina  marble.vert-antique  marble.rouge-royal
+stone.limestone-warm  stone.limestone-pale  stone.granite-grey
+gold.leaf  gold.bronze-tarnished  glass.skylight-clear  glass.vitrine  glass.pyramid-tint
+wood.oak  wood.walnut  wood.gilt-frame  context.zinc-roof  context.seine-water  ...
+```
+
+Use `mat('wall.red-madder')` to get the cached material, and the same string in `addPart(..., name)`.
+Never construct a `MeshStandardMaterial` inline: each unique material is a state change, and the
+per-material merge depends on names being stable. `palette.json` also names four base materials per
+zone (`zones.denon` etc.) — those are your defaults.
+
+## 7. Determinism
+
+All variation comes from `ctx.rng(label)`:
+
+```ts
+const r = ctx.rng('paving');            // stable for this zone, this label, every run
+const jitter = r.range(-0.02, 0.02);    // also r.int, r.chance, r.pick, r.gauss, r.fork('sub')
+```
+
+`Math.random` is banned — `npm run build` runs `scripts/check.mjs`, which fails on it, on any
+`http(s)` URL in `src/`, and on any image/font/model import. Two builds of the same scene must be
+pixel-identical.
+
+## 8. Artworks
+
+An artwork is **data plus a factory**. You place artworks by id; you never model one.
+
+```ts
+import { placeArtwork } from '../../artworks/library';
+
+placeArtwork(group, {
+  id: 'denon/mona-lisa',          // the only thing the library keys on
+  title: 'Portrait de Monna Lisa',
+  artist: 'Leonardo da Vinci',
+  year: '1503-1519',
+  sizeCm: [77, 53],               // REAL painted size; never invent it
+  room: 'salle-des-etats',
+  wall: 'north',
+  position: [3.2, 8.9, 78.1],     // canvas centre, world metres
+  rotationY: Math.PI,             // 0 faces +Z
+});
+```
+
+Artwork data for the whole museum is in `handoffs/louvre/spec/artworks.json` (28 works, real sizes).
+If no factory is registered for an id you get a correctly-sized gilt frame with a blank canvas, so
+your room can be verified before the artwork library lands.
+
+## 9. Budget
+
+Per zone, measured with the capture harness on the built scene:
+
+| measure | ceiling |
+| --- | --- |
+| draw calls (whole scene, one zone loaded) | ≤ 150 |
+| visible triangles | ≤ 300 000 |
+| texture memory | ≤ 64 MB |
+| zone module load | ≤ 1.5 s on the CI machine |
+
+How to hit them: merge per room per material, instance anything repeated more than about 30 times,
+prefer texture detail over triangle detail, and delete ornament you cannot see from any spawn point.
+
+## 10. Verify yourself
+
+```bash
+cd louvre
+npm install
+npm run build                                   # check + typecheck + bundle
+npm run capture -- --zone denon --all --out captures/
+npm run capture -- --zone denon --spawn grande-galerie-west --tour 20 --out captures/
+```
+
+Then read `captures/capture-report.json`. It contains, per screenshot, `drawCalls`, `triangles`,
+`textureMB`, `cells`, plus zone-agnostic collision probes and any console errors. A run with console
+errors exits non-zero — treat that as a failure, not a warning.
+
+Frame rate under SwiftShader is meaningless; see `docs/PERF.md`.

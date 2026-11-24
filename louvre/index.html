@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Louvre — walkable replica</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root { color-scheme: dark; }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #0a0b0d; }
+      body { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: #e8e4dc; }
+      #scene { display: block; width: 100vw; height: 100vh; }
+      .hud, #help {
+        position: fixed; background: rgba(10, 11, 13, 0.62); border: 1px solid rgba(232, 228, 220, 0.14);
+        border-radius: 6px; padding: 8px 10px; backdrop-filter: blur(6px); pointer-events: none;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      }
+      .hud { top: 12px; left: 12px; min-width: 176px; pointer-events: auto; cursor: pointer; }
+      .hud b { color: #f6f1e6; font-size: 14px; }
+      .hud .dim { color: #9a958c; }
+      #help { left: 12px; bottom: 12px; color: #b9b3a8; max-width: 46ch; }
+      #banner {
+        display: none; position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+        background: rgba(120, 40, 30, 0.85); border: 1px solid rgba(255, 200, 180, 0.3);
+        padding: 8px 14px; border-radius: 6px; max-width: 70ch;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <div id="hud-host"></div>
+    <div id="help"></div>
+    <div id="banner"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

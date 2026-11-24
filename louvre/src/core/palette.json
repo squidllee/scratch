@@ -1,0 +1,373 @@
+{
+  "$schema": "louvre-material-palette/1",
+  "units": "hex sRGB, 8-bit per channel",
+  "provenance": "Colour NAMES come from museum documentation (Louvre press material, room notes, conservation reports) or from the building itself. HEX VALUES are approximations authored for this project by eye from photographs and named-colour references; they are NOT spectrophotometer samples. Every consumer should treat hex as the art direction value, not as measured paint.",
+  "zones": {
+    "pyramid": [
+      "walls.stone-cream",
+      "floors.pave-granite",
+      "ceilings.plaster-white",
+      "glass.pyramid-tint"
+    ],
+    "denon": [
+      "walls.red-madder",
+      "walls.midnight-blue",
+      "floors.parquet-versailles",
+      "ceilings.cream-cove"
+    ],
+    "sully": [
+      "walls.stone-grey",
+      "walls.ochre-earth",
+      "floors.stone-flag",
+      "ceilings.plaster-white"
+    ],
+    "richelieu": [
+      "walls.slate-green",
+      "walls.ochre-light",
+      "floors.marble-checker",
+      "ceilings.plaster-white"
+    ]
+  },
+  "wall": {
+    "red-madder": {
+      "hex": "#7C2A26",
+      "name": "Rouge de garance / madder red",
+      "where": "Salles Rouges, Denon level 1, rooms 700-702 (Grande Odalisque, Coronation, Raft of the Medusa, Liberty)",
+      "note": "Deep, slightly brownish red. The single most recognisable wall colour in the museum."
+    },
+    "red-madder-deep": {
+      "hex": "#5E1D1B",
+      "name": "Madder red, shaded vignette",
+      "where": "Lower wall band and reveals of the same rooms",
+      "note": "Use for the picture rail band and door reveals so the flat wall does not read as plastic."
+    },
+    "midnight-blue": {
+      "hex": "#1B2740",
+      "name": "Bleu de Prusse / midnight blue",
+      "where": "Salle des Etats, room 711 (Mona Lisa, Wedding at Cana), repaint of 2019",
+      "note": "Louvre calls it 'a very dense shade of blue enriched with subtle variations of black'. Nothing else in the palace is this colour."
+    },
+    "ochre": {
+      "hex": "#B98A4E",
+      "name": "Ochre / ocre jaune",
+      "where": "Denon Egyptian rooms and the Denon stair halls; pre-2019 Salle des Etats",
+      "note": "Warm sand ochre, flat matt."
+    },
+    "ochre-earth": {
+      "hex": "#8A5F35",
+      "name": "Terre d'ocre profonde",
+      "where": "Sully level 0 rooms on the Egyptian side",
+      "note": "Darker, browner sibling of ochre."
+    },
+    "stone-grey": {
+      "hex": "#B7B2A6",
+      "name": "Pierre de Paris, pale",
+      "where": "Sully Greek galleries 345-348 (Venus de Milo rooms)",
+      "note": "Neutral warm grey. Keeps marble statuary readable."
+    },
+    "slate-green": {
+      "hex": "#4C5A50",
+      "name": "Vert d'ardoise",
+      "where": "Richelieu level 0 Mesopotamian and sculpture rooms",
+      "note": "Desaturated blue-green slate."
+    },
+    "ochre-light": {
+      "hex": "#C9A272",
+      "name": "Ocre clair",
+      "where": "Richelieu level 1 (Napoleon III approach galleries)",
+      "note": "Lighter and cleaner than the Denon ochre."
+    },
+    "crimson-silk": {
+      "hex": "#8E1F2B",
+      "name": "Rouge impérial / crimson silk damask",
+      "where": "Napoleon III Apartments, room 544 Grand Salon",
+      "note": "A textile colour, not a paint. Render with a damask weave normal, not flat."
+    },
+    "apollon-blue": {
+      "hex": "#1E3557",
+      "name": "Bleu de la Galerie d'Apollon",
+      "where": "Galerie d'Apollon, room 705, ground behind the gilded stucco",
+      "note": "Deep lapis-like blue, always adjacent to gold leaf."
+    },
+    "egypt-dark": {
+      "hex": "#3E3A34",
+      "name": "Grise-brune des salles egyptiennes",
+      "where": "Crypte du sphinx, room 338",
+      "note": "Dark, low-reflectance, so the pink granite sphinx separates."
+    },
+    "white-plaster": {
+      "hex": "#F2EDE3",
+      "name": "Platre blanc",
+      "where": "Undercoats, vitrine plinths, cornices",
+      "note": "Never pure white; the Louvre whites are warm."
+    },
+    "stone-cream": {
+      "hex": "#D9D0BC",
+      "name": "Pierre de Chassagne, clair",
+      "where": "Hall Napoleon walls, undercroft; the concrete ceiling is tinted with the same stone dust",
+      "note": "Cool pale beige, drawn from the Chassagne stone cladding."
+    },
+    "stone-limestone-warm": {
+      "hex": "#CBB894",
+      "name": "Calcaire luteien, appareille",
+      "where": "Exterior and courtyard walls read as flat colour in the distance",
+      "note": "Same value as stone.limestone-warm for walls seen at frame-fill distance."
+    }
+  },
+  "floor": {
+    "parquet-versailles": {
+      "hex": "#A9784A",
+      "name": "Parquet de Versailles",
+      "pattern": "parquet",
+      "geometry": "Square panels 0.90 m, each inlaid with a diagonal chevron; oak, matte oil finish.",
+      "where": "Denon level 1 painting rooms, Grande Galerie",
+      "params": {
+        "tile_m": 0.9,
+        "angle_deg": 45,
+        "plank_m": 0.11,
+        "roughness": 0.55
+      }
+    },
+    "parquet-poitiers": {
+      "hex": "#9C6B3E",
+      "name": "Parquet a la Poitiers",
+      "pattern": "parquet",
+      "geometry": "Herringbone, planks 0.55 m long at 45 degrees, no panel borders.",
+      "where": "Sully level 1-2 rooms",
+      "params": {
+        "plank_m": 0.55,
+        "angle_deg": 45,
+        "plank_w_m": 0.09,
+        "roughness": 0.6
+      }
+    },
+    "marble-checker": {
+      "hex": "#C8C2B4",
+      "name": "Dallage de marbre en damier",
+      "pattern": "checker",
+      "geometry": "Alternating pale and warm-grey marble slabs, 0.60 m, thin dark joint; occasional larger 1.20 m border course.",
+      "where": "Galerie d'Apollon, Richelieu grand stair, Napoleon III apartments",
+      "params": {
+        "tile_m": 0.6,
+        "second": "#8E8578",
+        "joint_m": 0.006
+      }
+    },
+    "stone-flag": {
+      "hex": "#C4BBA8",
+      "name": "Dalles de pierre",
+      "pattern": "flagstone",
+      "geometry": "Cut limestone flags 1.2 x 0.8 m, 8 mm joints, honed.",
+      "where": "Sully level 0 Greek and Egyptian galleries",
+      "params": {
+        "tile_m": [
+          1.2,
+          0.8
+        ],
+        "joint_m": 0.008
+      }
+    },
+    "pave-granite": {
+      "hex": "#9A948C",
+      "name": "Paves de gres et granit",
+      "pattern": "cobble",
+      "geometry": "Cour Napoléon: small sandstone and granite setts in fan pattern, 650,000 of them (Louvre figure). Cour Carree: a granite cross of Plaintel slabs with four compartments of small Fontainebleau sandstone setts between the arms.",
+      "where": "Cour Napoleon, Place du Carrousel, Cour Carree",
+      "params": {
+        "sett_m": 0.12,
+        "cross_width_m": 6.0
+      }
+    },
+    "hall-napoleon-stone": {
+      "hex": "#D6CDBB",
+      "name": "Pierre beige de Chassagne",
+      "pattern": "ashlar",
+      "geometry": "Large honed limestone panels on the walls of the Hall Napoleon, with a white concrete ceiling tinted from the same stone dust.",
+      "where": "Hall Napoleon",
+      "params": {
+        "panel_m": [
+          1.8,
+          1.2
+        ]
+      }
+    }
+  },
+  "ceiling": {
+    "plaster-white": {
+      "hex": "#F5F1E8",
+      "name": "Platre blanc",
+      "where": "Sully and Richelieu vaults, ribs"
+    },
+    "cream-cove": {
+      "hex": "#EDE4D2",
+      "name": "Corniche creme",
+      "where": "Denon salles, cove and picture rail"
+    },
+    "gold-leaf": {
+      "hex": "#C9A227",
+      "name": "Dorure a la feuille",
+      "where": "Galerie d'Apollon vault, Napoleon III salons, picture frames"
+    },
+    "glazed-skylight": {
+      "hex": "#DFE6E8",
+      "name": "Verriere",
+      "where": "Grande Galerie, Salle des Etats, Cour Marly, Cour Puget, Cour Khorsabad"
+    }
+  },
+  "trim": {
+    "stone-limestone-warm": {
+      "hex": "#CBB894",
+      "name": "Calcaire lutetien",
+      "where": "All exterior masonry, reveals, plinths"
+    },
+    "gilt": {
+      "hex": "#B9932F",
+      "name": "Bronze dore",
+      "where": "Balustrades, door hardware, picture frames"
+    },
+    "marble-rouge": {
+      "hex": "#8C3A34",
+      "name": "Marbre rouge antique",
+      "where": "Pilasters flanking the Venus de Milo room (Louvre trail: 'between the red marble pillars')"
+    },
+    "wood-oak": {
+      "hex": "#9C7247",
+      "name": "Chene",
+      "where": "Dutch rooms: door cases and skirting"
+    }
+  },
+  "stone": {
+    "limestone-warm": {
+      "hex": "#CBB894",
+      "name": "Pierre de Paris (lutetien), warm",
+      "roughness": 0.85
+    },
+    "limestone-pale": {
+      "hex": "#DED3BC",
+      "name": "Pierre de Paris, bleached",
+      "roughness": 0.85
+    },
+    "granite-grey": {
+      "hex": "#8F8A82",
+      "name": "Granit gris",
+      "roughness": 0.7
+    }
+  },
+  "gold": {
+    "leaf": {
+      "hex": "#C9A227",
+      "metalness": 0.9,
+      "roughness": 0.28,
+      "name": "Or en feuille"
+    },
+    "bronze-tarnished": {
+      "hex": "#7A5F33",
+      "metalness": 0.85,
+      "roughness": 0.45,
+      "name": "Bronze patine"
+    }
+  },
+  "glass": {
+    "pyramid-tint": {
+      "hex": "#DCE8E4",
+      "opacity": 0.22,
+      "roughness": 0.03,
+      "name": "Verre feuillete 21 mm, Saint-Gobain",
+      "note": "Near-colourless; the pyramid reads green only from accumulated thickness."
+    },
+    "skylight-clear": {
+      "hex": "#E9EEEC",
+      "opacity": 0.1,
+      "roughness": 0.05,
+      "name": "Verre de verriere"
+    },
+    "vitrine": {
+      "hex": "#F4F6F4",
+      "opacity": 0.06,
+      "roughness": 0.0,
+      "name": "Verre de vitrine (Mona Lisa)"
+    }
+  },
+  "wood": {
+    "oak": {
+      "hex": "#9C7247",
+      "name": "Chene"
+    },
+    "walnut": {
+      "hex": "#6B4A2E",
+      "name": "Noyer"
+    },
+    "gilt-frame": {
+      "hex": "#B08D3C",
+      "name": "Cadre dore",
+      "note": "Every heroic painting in the route hangs in a gilded frame about 12 cm wide with a 3 cm sight edge."
+    }
+  },
+  "marble": {
+    "rouge-royal": {
+      "hex": "#7A2E2C",
+      "name": "Rouge royal",
+      "vein": "#4A1A18"
+    },
+    "blanc-carrare": {
+      "hex": "#EDE8DE",
+      "name": "Blanc de Carrare",
+      "vein": "#C9C2B4"
+    },
+    "noir-marquina": {
+      "hex": "#26262A",
+      "name": "Noir de Marquina",
+      "vein": "#B9B7AE"
+    },
+    "vert-antique": {
+      "hex": "#3F5A48",
+      "name": "Vert antique",
+      "vein": "#8FA394"
+    },
+    "jaune-bresche": {
+      "hex": "#C7A269",
+      "name": "Jaune breche",
+      "vein": "#8A6A3C"
+    },
+    "gris-saint-beat": {
+      "hex": "#A9A79E",
+      "name": "Gris Saint-Beat",
+      "vein": "#6E6C64"
+    },
+    "pentelic": {
+      "hex": "#EFE9DD",
+      "name": "Marbre du Pentelique",
+      "vein": "#CFC7B7",
+      "note": "Borghese Gladiator; slightly warmer and more translucent than Carrare."
+    },
+    "portor": {
+      "hex": "#2E2A26",
+      "name": "Portor",
+      "vein": "#C7A94F"
+    }
+  },
+  "context": {
+    "sky-day": {
+      "hex": "#B9C9D6",
+      "name": "Ciel parisien, diffus"
+    },
+    "sky-dusk": {
+      "hex": "#3B4757",
+      "name": "Ciel au crepuscule"
+    },
+    "zinc-roof": {
+      "hex": "#6E7377",
+      "name": "Zinc a joint debout",
+      "roughness": 0.5,
+      "metalness": 0.35
+    },
+    "slate-roof": {
+      "hex": "#4A4E52",
+      "name": "Ardoise"
+    },
+    "seine-water": {
+      "hex": "#6B7A6F",
+      "name": "La Seine"
+    }
+  }
+}

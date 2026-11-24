@@ -1,0 +1,23 @@
+{
+  "name": "louvre",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Browser-walkable 3D replica of the Louvre (Three.js + TypeScript + Vite)",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/check.mjs && tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "typecheck": "tsc --noEmit",
+    "capture": "node scripts/capture.mjs"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "puppeteer-core": "^25.18.1"
+  }
+}
