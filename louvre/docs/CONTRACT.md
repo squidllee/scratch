@@ -342,6 +342,16 @@ when:
   it (tolerance `--bbox-tolerance`, default 3 m); and every artwork `artworks.json` assigns to those
   rooms must be in the scene graph (name it through `placeArtwork`, which tags `userData.artworkId`).
 
+Instance check: `--verify` fails if any instance sits outside where the zone says it is. The basis
+depends on the zone, and the report records which one was used (`instanceCheck.basis`):
+
+- **rooms** — a zone the spec gives rooms to is checked against those room boxes.
+- **bounds** — a zone with no spec rooms (the exterior wings build façades over open ground) is
+  checked against its own rendered bounds.
+
+Either way a merged `InstancedMesh` that lost its group transform fails, and so does a single mesh
+stacking instances on one point. There is no flag to skip it.
+
 Raycast probe: `--probe` fires a ray from every spawn point along its sight line and reports the
 object and material it hits. Pixel statistics cannot tell a correct wall from a window row hung on
 the wrong surface; a hit test can. Use `--expect-material wall.red-madder` to assert what a zone's

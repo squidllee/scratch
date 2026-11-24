@@ -299,18 +299,11 @@ async function main() {
   }
 
   const scene = await page.evaluate(() => window.__test.structure());
-  if (scene.instances && scene.instances.outsideRooms > 0) {
-    failures.push({
-      check: 'instances',
-      value: scene.instances,
-      message: scene.instances.outsideRooms + ' of ' + scene.instances.count +
-        ' instances sit outside every room box; a merged InstancedMesh probably lost its group transform',
-    });
-  }
   let structureReport = { checked: false, reason: 'not requested', specRoot: null };
   if (verify) {
     structureReport = await verifyStructure(scene);
   }
+  const instanceCheck = checkInstances(scene, structureReport);
 
   const finalStats = shots[0]?.stats ?? (await page.evaluate(() => window.__stats()));
   console.log('stats: ' + JSON.stringify(finalStats));
@@ -328,6 +321,7 @@ async function main() {
     atmosphere,
     probe: probeReport,
     structure: { rooms: scene.rooms, bounds: scene.bounds, artworkIds: scene.artworkIds, instances: scene.instances },
+    instanceCheck,
     structureCheck: structureReport,
     failures,
     consoleErrors,
@@ -348,6 +342,43 @@ async function main() {
   if (server) await new Promise((r) => server.close(r));
   if (consoleErrors.length) process.exitCode = 2;
   if (failures.length) process.exitCode = 1;
+
+  /**
+   * Instances must sit where the zone says it is. The basis depends on the zone: a zone the spec
+   * gives rooms to (an interior wing) is checked against those rooms; a zone the spec gives no
+   * rooms to (the exterior wings, which declare pavements of their own) is checked against its own
+   * rendered bounds. A merged InstancedMesh that lost its group transform fails either basis, and a
+   * pile of instances at one coordinate fails the duplicate check. There is no skip flag.
+   */
+  function checkInstances(scene, structure) {
+    const inst = scene.instances;
+    if (!inst || inst.count === 0) {
+      return { basis: 'none', count: 0, outside: 0, duplicates: 0 };
+    }
+    const basis = structure.checked && structure.roomsExpected > 0 ? 'rooms' : 'bounds';
+    const outside = basis === 'rooms' ? inst.outsideRooms : inst.outsideBounds;
+    const result = { basis, count: inst.count, outside, duplicates: inst.duplicatePositions ?? 0 };
+    if (outside > 0) {
+      failures.push({
+        check: 'instances',
+        value: result,
+        message: outside + ' of ' + inst.count + ' instances sit outside the zone\'s ' +
+          (basis === 'rooms' ? 'room boxes' : 'own bounds') +
+          '; a merged InstancedMesh probably lost its group transform',
+      });
+    }
+    const duplicateBudget = Math.max(20, Math.round(inst.count * 0.05));
+    if (result.duplicates > duplicateBudget) {
+      failures.push({
+        check: 'instances',
+        value: result,
+        message: result.duplicates + ' of ' + inst.count + ' instances share a position (' +
+          duplicateBudget + ' allowed); transforms may have collapsed onto one point',
+      });
+    }
+    console.log('instance check: ' + JSON.stringify(result));
+    return result;
+  }
 
   /** Structural asserts against the measured spec. */
   async function verifyStructure(scene) {

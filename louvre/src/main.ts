@@ -207,31 +207,43 @@ const structure = (): {
   });
 
   // Instances are the one transform an agent cannot check by reading code: a merged InstancedMesh
-  // whose group transform was dropped still draws, just somewhere it does not belong.
-  const instances = { count: 0, outsideRooms: 0 };
+  // whose group transform was dropped still draws, just somewhere it does not belong. Two bases are
+  // reported so the harness can pick the right one: the zone's walkable rooms, and the zone's own
+  // rendered bounds (a zone like the exterior wings has pavement rooms only, and its façades stand
+  // far outside them by design). A dropped transform fails both. A pile of instances at one point
+  // is the other symptom, so identical positions are counted too.
+  const instances = { count: 0, outsideRooms: 0, outsideBounds: 0, duplicatePositions: 0 };
   if (zone) {
     zone.group.updateMatrixWorld(true);
     const m = new THREE.Matrix4();
     const v = new THREE.Vector3();
-    const within = (p: THREE.Vector3): boolean =>
-      rooms.some((room) => {
-        const b = room.bounds;
-        const pad = 8;
-        return (
-          p.x >= b.min[0] - pad && p.x <= b.max[0] + pad &&
-          p.y >= b.min[1] - pad && p.y <= b.max[1] + pad &&
-          p.z >= b.min[2] - pad && p.z <= b.max[2] + pad
-        );
-      });
+    const pad = 8;
+    const withinBox = (b: { min: readonly number[]; max: readonly number[] }, p: THREE.Vector3): boolean =>
+      p.x >= (b.min[0] as number) - pad && p.x <= (b.max[0] as number) + pad &&
+      p.y >= (b.min[1] as number) - pad && p.y <= (b.max[1] as number) + pad &&
+      p.z >= (b.min[2] as number) - pad && p.z <= (b.max[2] as number) + pad;
+    const withinRooms = (p: THREE.Vector3): boolean => rooms.some((room) => withinBox(room.bounds, p));
+    const box = new THREE.Box3().setFromObject(zone.group);
+    const extent = { min: [box.min.x, box.min.y, box.min.z], max: [box.max.x, box.max.y, box.max.z] };
     zone.group.traverse((o) => {
       const im = o as THREE.InstancedMesh;
       if (!im.isInstancedMesh) return;
+      // Coincidence is counted per mesh: two meshes (a shaft and its capital) legitimately share
+      // their instance positions, but one mesh stacking instances on one point is a collapsed
+      // transform.
+      const seen = new Map<string, number>();
       for (let i = 0; i < im.count; i++) {
         im.getMatrixAt(i, m);
         v.setFromMatrixPosition(m).applyMatrix4(im.matrixWorld);
         instances.count++;
-        if (!within(v)) instances.outsideRooms++;
+        if (!withinRooms(v)) instances.outsideRooms++;
+        if (!withinBox(extent, v)) instances.outsideBounds++;
+        const key = Math.round(v.x * 100) + ':' + Math.round(v.y * 100) + ':' + Math.round(v.z * 100);
+        seen.set(key, (seen.get(key) ?? 0) + 1);
       }
+      let worst = 0;
+      for (const n of seen.values()) worst = Math.max(worst, n);
+      if (worst > im.count * 0.1) instances.duplicatePositions += worst;
     });
   }
   let bounds: { min: [number, number, number]; max: [number, number, number] } | null = null;
