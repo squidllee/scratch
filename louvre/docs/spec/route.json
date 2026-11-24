@@ -1,0 +1,1883 @@
+{
+  "$schema": "louvre-route/1",
+  "frame": "metres; +X east, +Y up, +Z south; origin at the centre of the Pyramid's base; ground level of the Cour Napoleon is y = 0. See coordinates.md.",
+  "floorY": {
+    "-1": -9.0,
+    "0": 0.0,
+    "1": 7.0,
+    "2": 13.6
+  },
+  "wallThickness_m": 0.6,
+  "portalRule": "Portals are undirected passages. Each is listed on both rooms. `kind` is descriptive: door, passage, stair, arch, tunnel, open (no door leaf). Stairs connect different floorY values.",
+  "rooms": [
+    {
+      "id": "hall-napoleon",
+      "name": "Hall Napoleon",
+      "nameFr": "Hall Napoleon",
+      "louvreRoom": null,
+      "wing": "pyramid",
+      "zone": "pyramid-courtyard",
+      "levels": [
+        -1
+      ],
+      "floorY": -9.0,
+      "clearHeight_m": 9.0,
+      "footprint": {
+        "x": [
+          -30.0,
+          30.0
+        ],
+        "z": [
+          -21.0,
+          21.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 60.0,
+        "width_m": 42.0,
+        "area_m2": 2520,
+        "basis": "derived",
+        "source": "louvre.fr gives 2,500 m2 for private events in the hall; the documentary on the Grand Louvre gives a 9 m depth for '2,000 m2'. We hold the area at 2,500 and make the room 60 x 42 to sit under and around the 35.42 m pyramid."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 9.0,
+        "notes": "Smooth white concrete tinted with dust of the same Chassagne stone as the walls; the four-sided underside of the pyramid opens through it."
+      },
+      "floorMaterial": "floor.hall-napoleon-stone",
+      "wallColour": "wall.stone-cream",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Daylight falling through the glass pyramid, plus continuous cove light on the walls. Bright, cool, no spotlights.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "passage-denon",
+          "kind": "passage"
+        },
+        {
+          "to": "passage-richelieu-link",
+          "kind": "passage"
+        },
+        {
+          "to": "cour-napoleon",
+          "kind": "stair",
+          "note": "exit stairs up through the pyramid"
+        }
+      ]
+    },
+    {
+      "id": "cour-napoleon",
+      "name": "Cour Napoleon",
+      "nameFr": "Cour Napoleon",
+      "louvreRoom": null,
+      "wing": "courtyard",
+      "zone": "pyramid-courtyard",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": null,
+      "footprint": {
+        "x": [
+          -84.0,
+          116.0
+        ],
+        "z": [
+          -70.0,
+          70.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 200.0,
+        "width_m": 140.0,
+        "area_m2": 28000,
+        "basis": "measured-total/estimated-split",
+        "source": "Area 28,000 m2 is the Louvre's published figure; the 200 x 140 split is ours."
+      },
+      "ceiling": {
+        "type": "open-sky",
+        "height_m": null,
+        "notes": "Paved court, no roof."
+      },
+      "floorMaterial": "floor.pave-granite",
+      "wallColour": "wall.stone-limestone-warm",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Full daylight. The pyramid and the three satellite pyramids cast the only shadows worth modelling.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "hall-napoleon",
+          "kind": "stair"
+        },
+        {
+          "to": "place-du-carrousel",
+          "kind": "open"
+        },
+        {
+          "to": "pavillon-horloge",
+          "kind": "arch"
+        },
+        {
+          "to": "passage-richelieu-link",
+          "kind": "open"
+        }
+      ]
+    },
+    {
+      "id": "place-du-carrousel",
+      "name": "Place du Carrousel",
+      "nameFr": "Place du Carrousel",
+      "louvreRoom": null,
+      "wing": "courtyard",
+      "zone": "pyramid-courtyard",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": null,
+      "footprint": {
+        "x": [
+          -236.0,
+          -84.0
+        ],
+        "z": [
+          -70.0,
+          70.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 152.0,
+        "width_m": 140.0,
+        "area_m2": 21280,
+        "basis": "derived",
+        "source": "Bounded by the Arc du Carrousel at its west end (220 m from the pyramid tip-to-tip on the axis) and the Cour Napoleon at its east. Not a separately published area."
+      },
+      "ceiling": {
+        "type": "open-sky",
+        "height_m": null,
+        "notes": null
+      },
+      "floorMaterial": "floor.pave-granite",
+      "wallColour": "wall.stone-limestone-warm",
+      "trim": null,
+      "lighting": "Full daylight. Hedges screen the inverted pyramid's centre (it is not visible from the surface).",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "cour-napoleon",
+          "kind": "open"
+        }
+      ]
+    },
+    {
+      "id": "passage-denon",
+      "name": "Denon approach, under the court",
+      "nameFr": "Passage vers l'aile Denon",
+      "louvreRoom": null,
+      "wing": "denon",
+      "zone": "pyramid-courtyard",
+      "levels": [
+        -1
+      ],
+      "floorY": -9.0,
+      "clearHeight_m": 4.5,
+      "footprint": {
+        "x": [
+          30.0,
+          62.0
+        ],
+        "z": [
+          21.0,
+          70.5
+        ]
+      },
+      "dimensions": {
+        "length_m": 49.5,
+        "width_m": 32.0,
+        "area_m2": 1584,
+        "basis": "estimated",
+        "source": "Reconstructed undercroft. The real link from the Hall Napoleon to the Daru staircase runs under the Cour Napoleon and rises; we model it as one flat gallery with a ramp in its last 10 m."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 4.5,
+        "notes": "White concrete with slot lights."
+      },
+      "floorMaterial": "floor.hall-napoleon-stone",
+      "wallColour": "wall.stone-cream",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Artificial, warm white, low level; a bright band at the far end where the Daru staircase begins.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "hall-napoleon",
+          "kind": "passage"
+        },
+        {
+          "to": "escalier-daru",
+          "kind": "stair"
+        }
+      ]
+    },
+    {
+      "id": "passage-richelieu-link",
+      "name": "Richelieu link, under the court",
+      "nameFr": "Passage Richelieu (liaison)",
+      "louvreRoom": null,
+      "wing": "richelieu",
+      "zone": "pyramid-courtyard",
+      "levels": [
+        -1
+      ],
+      "floorY": -9.0,
+      "clearHeight_m": 4.5,
+      "footprint": {
+        "x": [
+          -30.0,
+          -16.0
+        ],
+        "z": [
+          -70.0,
+          -21.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 49.0,
+        "width_m": 14.0,
+        "area_m2": 686,
+        "basis": "estimated",
+        "source": "Rises from the Hall Napoleon (-9) to the courtyard level (0). In reality the Passage Richelieu is a ramp at courtyard level."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 4.5,
+        "notes": null
+      },
+      "floorMaterial": "floor.hall-napoleon-stone",
+      "wallColour": "wall.stone-cream",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Artificial; daylit slot at the courtyard end.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "hall-napoleon",
+          "kind": "passage"
+        },
+        {
+          "to": "cour-napoleon",
+          "kind": "stair"
+        },
+        {
+          "to": "passage-richelieu",
+          "kind": "passage"
+        }
+      ]
+    },
+    {
+      "id": "escalier-daru",
+      "name": "Daru Staircase (Escalier Daru), with the landing of the Winged Victory",
+      "nameFr": "Escalier Daru, palier de la Victoire de Samothrace",
+      "louvreRoom": "703",
+      "wing": "denon",
+      "zone": "denon-interior",
+      "levels": [
+        -1,
+        0,
+        1
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 18.0,
+      "footprint": {
+        "x": [
+          62.0,
+          82.0
+        ],
+        "z": [
+          74.0,
+          96.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 22.0,
+        "width_m": 20.0,
+        "area_m2": 440,
+        "basis": "estimated",
+        "source": "No published survey. Sized so that the 5.57 m Samothrace monument sits at the top of three flights with 5 m of clearance above it and 8 m of open landing around it."
+      },
+      "ceiling": {
+        "type": "coffered",
+        "height_m": 18.0,
+        "notes": "Renaissance-style coffered ceiling above the top landing; the lower flights are open to the courtyard wall."
+      },
+      "floorMaterial": "floor.marble-checker",
+      "wallColour": "wall.ochre",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "From above, through high windows; the Nike is raked from the upper left and lit from below only faintly.",
+      "artworks": [
+        "winged-victory"
+      ],
+      "portals": [
+        {
+          "to": "passage-denon",
+          "kind": "stair"
+        },
+        {
+          "to": "galerie-michel-ange",
+          "kind": "door"
+        },
+        {
+          "to": "salle-daru",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "galerie-michel-ange",
+      "name": "Michelangelo Gallery",
+      "nameFr": "Galerie Michel-Ange",
+      "louvreRoom": "403",
+      "wing": "denon",
+      "zone": "denon-interior",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 6.2,
+      "footprint": {
+        "x": [
+          32.0,
+          62.0
+        ],
+        "z": [
+          74.0,
+          96.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 30.0,
+        "width_m": 22.0,
+        "area_m2": 660,
+        "basis": "estimated",
+        "source": "Plan footprint is ours; the room number and the three sculptures are the Louvre's."
+      },
+      "ceiling": {
+        "type": "vault",
+        "height_m": 6.2,
+        "notes": "Flat plaster vault between stone ribs, painted off-white."
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.stone-grey",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Cool daylight from high side windows plus a top light; sculpture on low plinths, shadows short and soft.",
+      "artworks": [
+        "dying-slave",
+        "rebellious-slave",
+        "psyche-revived"
+      ],
+      "portals": [
+        {
+          "to": "escalier-daru",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "salle-daru",
+      "name": "Salle Daru (Roman red room)",
+      "nameFr": "Salle Daru",
+      "louvreRoom": "702",
+      "wing": "denon",
+      "zone": "denon-interior",
+      "levels": [
+        1
+      ],
+      "floorY": 7.0,
+      "clearHeight_m": 7.5,
+      "footprint": {
+        "x": [
+          32.0,
+          62.0
+        ],
+        "z": [
+          74.0,
+          92.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 30.0,
+        "width_m": 18.0,
+        "area_m2": 540,
+        "basis": "estimated",
+        "source": "No published area. Deep enough for the 6.21 x 9.79 m Coronation on the long wall with 4 m of hanging clearance."
+      },
+      "ceiling": {
+        "type": "glazed-skylight",
+        "height_m": 7.5,
+        "notes": "Lefuel's top-lit salles: a flat glazed strip over the centre of the room, cornice at 7.5 m."
+      },
+      "floorMaterial": "floor.parquet-versailles",
+      "wallColour": "wall.red-madder",
+      "trim": "trim.gilt",
+      "lighting": "Diffuse top light, no visible source; the red walls take the light down and the gilded frames catch it.",
+      "artworks": [
+        "coronation",
+        "grande-odalisque",
+        "oath-of-the-horatii"
+      ],
+      "portals": [
+        {
+          "to": "escalier-daru",
+          "kind": "arch"
+        },
+        {
+          "to": "salle-denon",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "salle-denon",
+      "name": "Salle Denon",
+      "nameFr": "Salle Denon",
+      "louvreRoom": "701",
+      "wing": "denon",
+      "zone": "denon-interior",
+      "levels": [
+        1
+      ],
+      "floorY": 7.0,
+      "clearHeight_m": 7.5,
+      "footprint": {
+        "x": [
+          2.0,
+          32.0
+        ],
+        "z": [
+          74.0,
+          92.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 30.0,
+        "width_m": 18.0,
+        "area_m2": 540,
+        "basis": "estimated",
+        "source": "As Salle Daru."
+      },
+      "ceiling": {
+        "type": "glazed-skylight",
+        "height_m": 7.5,
+        "notes": "Same Lefuel strip light."
+      },
+      "floorMaterial": "floor.parquet-versailles",
+      "wallColour": "wall.red-madder",
+      "trim": "trim.gilt",
+      "lighting": "As Salle Daru.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "salle-daru",
+          "kind": "arch"
+        },
+        {
+          "to": "salle-mollien",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "salle-mollien",
+      "name": "Salle Mollien (Roman red room)",
+      "nameFr": "Salle Mollien",
+      "louvreRoom": "700",
+      "wing": "denon",
+      "zone": "denon-interior",
+      "levels": [
+        1
+      ],
+      "floorY": 7.0,
+      "clearHeight_m": 7.5,
+      "footprint": {
+        "x": [
+          -28.0,
+          2.0
+        ],
+        "z": [
+          74.0,
+          92.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 30.0,
+        "width_m": 18.0,
+        "area_m2": 540,
+        "basis": "estimated",
+        "source": "As Salle Daru."
+      },
+      "ceiling": {
+        "type": "glazed-skylight",
+        "height_m": 7.5,
+        "notes": "Same Lefuel strip light."
+      },
+      "floorMaterial": "floor.parquet-versailles",
+      "wallColour": "wall.red-madder",
+      "trim": "trim.gilt",
+      "lighting": "As Salle Daru.",
+      "artworks": [
+        "liberty",
+        "raft-of-the-medusa",
+        "death-of-sardanapalus"
+      ],
+      "portals": [
+        {
+          "to": "salle-denon",
+          "kind": "arch"
+        },
+        {
+          "to": "salle-des-etats",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "salle-des-etats",
+      "name": "Salle des Etats (Mona Lisa room)",
+      "nameFr": "Salle des Etats",
+      "louvreRoom": "711",
+      "wing": "denon",
+      "zone": "denon-interior",
+      "levels": [
+        1
+      ],
+      "floorY": 7.0,
+      "clearHeight_m": 8.5,
+      "footprint": {
+        "x": [
+          -68.0,
+          -28.0
+        ],
+        "z": [
+          74.0,
+          91.4
+        ]
+      },
+      "dimensions": {
+        "length_m": 40.0,
+        "width_m": 17.4,
+        "area_m2": 696,
+        "basis": "measured-area/derived-split",
+        "source": "Louvre press (2019): 698 m2 of floor. Length 40 m is the widely quoted figure; width follows from the area."
+      },
+      "ceiling": {
+        "type": "glazed-skylight",
+        "height_m": 8.5,
+        "notes": "Glass ceiling added in the Third Republic so that no reflection falls on the paintings; a lantern-like strip over the whole room."
+      },
+      "floorMaterial": "floor.parquet-versailles",
+      "wallColour": "wall.midnight-blue",
+      "trim": "trim.gilt",
+      "lighting": "Cool diffuse top light; the Mona Lisa in her own glass case is separately lit, brighter than the room, sitting alone on a free-standing cimaise.",
+      "artworks": [
+        "mona-lisa",
+        "wedding-at-cana"
+      ],
+      "portals": [
+        {
+          "to": "salle-mollien",
+          "kind": "arch"
+        },
+        {
+          "to": "galerie-des-sessions",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "galerie-des-sessions",
+      "name": "Sessions gallery (reconstructed link)",
+      "nameFr": "Galerie des Sessions (liaison reconstruite)",
+      "louvreRoom": null,
+      "wing": "denon",
+      "zone": "denon-interior",
+      "levels": [
+        1
+      ],
+      "floorY": 7.0,
+      "clearHeight_m": 7.5,
+      "footprint": {
+        "x": [
+          -68.0,
+          -48.0
+        ],
+        "z": [
+          91.4,
+          141.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 49.6,
+        "width_m": 20.0,
+        "area_m2": 992,
+        "basis": "invented",
+        "source": "EXPLICITLY INVENTED. The real museum links the Salle des Etats to the Grande Galerie through the Escalier Mollien and the Salle des Sessions, a set of spaces we do not model. This single gallery stands in for them and is the only room in the route with no real counterpart."
+      },
+      "ceiling": {
+        "type": "glazed-skylight",
+        "height_m": 7.5,
+        "notes": null
+      },
+      "floorMaterial": "floor.parquet-versailles",
+      "wallColour": "wall.red-madder-deep",
+      "trim": "trim.gilt",
+      "lighting": "Top light, dimmer than the Salles Rouges, so the Grande Galerie reads as the bright release.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "salle-des-etats",
+          "kind": "arch"
+        },
+        {
+          "to": "grande-galerie",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "grande-galerie",
+      "name": "Grande Galerie",
+      "nameFr": "Grande Galerie",
+      "louvreRoom": "710",
+      "wing": "denon",
+      "zone": "denon-interior",
+      "levels": [
+        1
+      ],
+      "floorY": 7.0,
+      "clearHeight_m": 9.5,
+      "footprint": {
+        "x": [
+          -172.0,
+          96.0
+        ],
+        "z": [
+          141.0,
+          154.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 268.0,
+        "width_m": 13.0,
+        "area_m2": 3484,
+        "basis": "measured-width/truncated-length",
+        "source": "Width 13 m and museum-room length 288 m are both published. The 288 m includes the Salon Carre bay, which we model separately, so the open run here is 268 m."
+      },
+      "ceiling": {
+        "type": "glazed-skylight",
+        "height_m": 9.5,
+        "notes": "The 1990s/2000s glazed roof: a continuous lantern running the whole length, with transverse ribs every 5.5 m."
+      },
+      "floorMaterial": "floor.parquet-versailles",
+      "wallColour": "wall.stone-grey",
+      "trim": "trim.gilt",
+      "lighting": "Even, seamless top light for 268 m. No windows on the river side. This is the brightest and flattest light in the building.",
+      "artworks": [
+        "virgin-of-the-rocks",
+        "sainte-anne",
+        "belle-jardiniere"
+      ],
+      "portals": [
+        {
+          "to": "galerie-des-sessions",
+          "kind": "arch"
+        },
+        {
+          "to": "salon-carre",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "salon-carre",
+      "name": "Salon Carre",
+      "nameFr": "Salon Carre",
+      "louvreRoom": null,
+      "wing": "denon",
+      "zone": "denon-interior",
+      "levels": [
+        1
+      ],
+      "floorY": 7.0,
+      "clearHeight_m": 8.5,
+      "footprint": {
+        "x": [
+          96.0,
+          116.0
+        ],
+        "z": [
+          141.0,
+          154.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 20.0,
+        "width_m": 13.0,
+        "area_m2": 260,
+        "basis": "estimated",
+        "source": "The square salon at the east end of the Grande Galerie; its 20 m side is our estimate from the Grande Galerie's 288 m including it."
+      },
+      "ceiling": {
+        "type": "coffered",
+        "height_m": 8.5,
+        "notes": "Coved, with the glazed lantern continuing in."
+      },
+      "floorMaterial": "floor.parquet-versailles",
+      "wallColour": "wall.stone-grey",
+      "trim": "trim.gilt",
+      "lighting": "Top light plus daylight from the east, because the room turns the corner toward the Petite Galerie.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "grande-galerie",
+          "kind": "arch"
+        },
+        {
+          "to": "rotonde-apollon",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "rotonde-apollon",
+      "name": "Rotonde d'Apollon",
+      "nameFr": "Rotonde d'Apollon",
+      "louvreRoom": null,
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        1
+      ],
+      "floorY": 7.0,
+      "clearHeight_m": 15.0,
+      "footprint": {
+        "x": [
+          116.0,
+          133.0
+        ],
+        "z": [
+          141.0,
+          154.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 13.0,
+        "width_m": 17.0,
+        "area_m2": 221,
+        "basis": "estimated",
+        "source": "Circular in reality; modelled as the square of its bounding footprint, to be cut to a cylinder by the builder."
+      },
+      "ceiling": {
+        "type": "vault",
+        "height_m": 15.0,
+        "notes": "Domed, painted; gilt ribs."
+      },
+      "floorMaterial": "floor.marble-checker",
+      "wallColour": "wall.apollon-blue",
+      "trim": "trim.gilt",
+      "lighting": "Dim, warm; a lantern above.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "salon-carre",
+          "kind": "arch"
+        },
+        {
+          "to": "galerie-apollon",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "galerie-apollon",
+      "name": "Galerie d'Apollon",
+      "nameFr": "Galerie d'Apollon",
+      "louvreRoom": "705",
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        1
+      ],
+      "floorY": 7.0,
+      "clearHeight_m": 15.0,
+      "footprint": {
+        "x": [
+          116.0,
+          133.0
+        ],
+        "z": [
+          80.0,
+          141.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 61.0,
+        "width_m": 17.0,
+        "area_m2": 1037,
+        "basis": "measured-length",
+        "source": "Louvre press office: 61.34 m long, 15 m ceiling. Width is our estimate to fit the 23.75 m deep Petite Galerie wing."
+      },
+      "ceiling": {
+        "type": "vault",
+        "height_m": 15.0,
+        "notes": "Barrel vault entirely gilded, with Delacroix's Apollo Slays Python in the central panel and Le Brun's Hours around it; gilded stucco reliefs of the seasons and signs of the zodiac on the coves."
+      },
+      "floorMaterial": "floor.marble-checker",
+      "wallColour": "wall.apollon-blue",
+      "trim": "trim.gilt",
+      "lighting": "The most dramatic interior light in the palace: narrow high windows on one side throw raking light across the gold, and the vault glows rather than being lit.",
+      "artworks": [
+        "apollo-ceiling-delacroix",
+        "crown-of-louis-xv"
+      ],
+      "portals": [
+        {
+          "to": "rotonde-apollon",
+          "kind": "arch"
+        },
+        {
+          "to": "pavillon-horloge",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "pavillon-horloge",
+      "name": "Pavillon de l'Horloge",
+      "nameFr": "Pavillon de l'Horloge (Pavillon Sully)",
+      "louvreRoom": null,
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        0,
+        1,
+        2
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 20.0,
+      "footprint": {
+        "x": [
+          116.0,
+          139.75
+        ],
+        "z": [
+          -14.0,
+          14.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 28.0,
+        "width_m": 23.75,
+        "area_m2": 665,
+        "basis": "derived",
+        "source": "Roof frame measured at 21.50 x 16.50 m between wall plates (Goutal/GeneB, 2017); the pavilion's masonry block is wider, and we take the full wing depth 23.75 m and a 28 m frontage."
+      },
+      "ceiling": {
+        "type": "vault",
+        "height_m": 20.0,
+        "notes": "Stone vaults at each level; the Salle de la Chapelle was originally 12.1 m high and double-height (Blavette restoration survey). Modelled here as one continuous 20 m volume."
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.stone-grey",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Daylight through the east and west arches; deep and cool. The clock face is lit from inside at dusk.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "cour-napoleon",
+          "kind": "arch"
+        },
+        {
+          "to": "cour-carree",
+          "kind": "arch"
+        },
+        {
+          "to": "escalier-henri-ii",
+          "kind": "door"
+        },
+        {
+          "to": "galerie-apollon",
+          "kind": "door"
+        },
+        {
+          "to": "sully-l2-corridor",
+          "kind": "stair"
+        }
+      ]
+    },
+    {
+      "id": "escalier-henri-ii",
+      "name": "Henri II Staircase",
+      "nameFr": "Escalier Henri II",
+      "louvreRoom": null,
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        0,
+        1,
+        2
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 14.0,
+      "footprint": {
+        "x": [
+          116.0,
+          139.75
+        ],
+        "z": [
+          14.0,
+          30.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 16.0,
+        "width_m": 23.75,
+        "area_m2": 380,
+        "basis": "estimated",
+        "source": "The straight-flight stone stair in the Lescot wing. Sized to the wing depth."
+      },
+      "ceiling": {
+        "type": "vault",
+        "height_m": 14.0,
+        "notes": "Stone barrel vault with carved coffers."
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.stone-grey",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "One tall window at the half-landing; the stair reads as a shaft of light in a stone box.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "pavillon-horloge",
+          "kind": "door"
+        },
+        {
+          "to": "salle-des-caryatides",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "salle-des-caryatides",
+      "name": "Salle des Caryatides",
+      "nameFr": "Salle des Caryatides",
+      "louvreRoom": "348",
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 8.5,
+      "footprint": {
+        "x": [
+          116.0,
+          139.75
+        ],
+        "z": [
+          30.0,
+          55.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 25.0,
+        "width_m": 23.75,
+        "area_m2": 594,
+        "basis": "measured-area/derived-split",
+        "source": "Wikipedia FR (citing the Louvre): a majestic hall of 600 m2. Split 25 x 23.75 to fill the Lescot wing depth. A popular guide's 30 x 13 m is inconsistent with 600 m2 and is rejected."
+      },
+      "ceiling": {
+        "type": "coffered",
+        "height_m": 8.5,
+        "notes": "The oldest surviving coffered ceiling in the Louvre: deep stone beams on the walls, five bays, painted and gilded in the 16th-century manner."
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.stone-grey",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Daylight from the courtyard side, low and raking; the room is stone-cold in colour and reads as shadowed even at noon.",
+      "artworks": [
+        "diana-of-versailles",
+        "borghese-gladiator",
+        "caryatids-goujon"
+      ],
+      "portals": [
+        {
+          "to": "escalier-henri-ii",
+          "kind": "door"
+        },
+        {
+          "to": "salle-grec-346",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "salle-grec-346",
+      "name": "Greek antiquities, classical and Hellenistic",
+      "nameFr": "Art grec classique et hellenistique",
+      "louvreRoom": "346",
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 6.4,
+      "footprint": {
+        "x": [
+          139.75,
+          172.0
+        ],
+        "z": [
+          56.25,
+          80.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 32.25,
+        "width_m": 23.75,
+        "area_m2": 766,
+        "basis": "derived",
+        "source": "Wing depth 23.75 m; length set by the Cour Carree's 160 m square split into three south-wing rooms."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 6.4,
+        "notes": "Flat plaster with a deep cove; the room is a 19th-century sculpture gallery."
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.stone-grey",
+      "trim": "trim.marble-rouge",
+      "lighting": "High side windows on the court side, so figures are lit from above and to one side; the floor stays dim.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "salle-des-caryatides",
+          "kind": "door"
+        },
+        {
+          "to": "salle-venus-milo",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "salle-venus-milo",
+      "name": "Venus de Milo room (classical and Hellenistic Greek art)",
+      "nameFr": "Salle de la Venus de Milo",
+      "louvreRoom": "345",
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 6.4,
+      "footprint": {
+        "x": [
+          172.0,
+          204.0
+        ],
+        "z": [
+          56.25,
+          80.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 32.25,
+        "width_m": 23.75,
+        "area_m2": 766,
+        "basis": "derived",
+        "source": "As room 346. The Louvre's own trail says you reach the Venus 'between the red marble pillars', which sets the room's trim."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 6.4,
+        "notes": null
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.stone-grey",
+      "trim": "trim.marble-rouge",
+      "lighting": "A single top light over the plinth plus low side light; the figure stands free of the wall so it is lit from three sides.",
+      "artworks": [
+        "venus-de-milo"
+      ],
+      "portals": [
+        {
+          "to": "salle-grec-346",
+          "kind": "door"
+        },
+        {
+          "to": "sphinx-crypt",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "sphinx-crypt",
+      "name": "Crypt of the Sphinx",
+      "nameFr": "Crypte du sphinx",
+      "louvreRoom": "338",
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 5.5,
+      "footprint": {
+        "x": [
+          204.0,
+          240.0
+        ],
+        "z": [
+          56.25,
+          80.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 36.0,
+        "width_m": 23.75,
+        "area_m2": 855,
+        "basis": "derived",
+        "source": "As room 346. Sources disagree on the level: the Louvre collection pages list room 338 at Niveau 0, some guides say -1. We follow the collection pages and put it at 0."
+      },
+      "ceiling": {
+        "type": "vault",
+        "height_m": 5.5,
+        "notes": "Low stone vault on square piers; deliberately oppressive."
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.egypt-dark",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Very low ambient, a tight pool of light over the sphinx and faint uplight on the walls. Almost nothing else is visible.",
+      "artworks": [
+        "great-sphinx-tanis"
+      ],
+      "portals": [
+        {
+          "to": "salle-venus-milo",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "cour-carree",
+      "name": "Cour Carree",
+      "nameFr": "Cour Carree",
+      "louvreRoom": null,
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": null,
+      "footprint": {
+        "x": [
+          139.75,
+          252.25
+        ],
+        "z": [
+          -56.25,
+          56.25
+        ]
+      },
+      "dimensions": {
+        "length_m": 112.5,
+        "width_m": 112.5,
+        "area_m2": 12656,
+        "basis": "measured",
+        "source": "A cited survey gives the court as 'un carre de 112,5 metres de cote'. Wikipedia's 160 m refers to the square formed by the buildings, outer face to outer face, which agrees: 112.5 + 2 x 23.75 = 160."
+      },
+      "ceiling": {
+        "type": "open-sky",
+        "height_m": null,
+        "notes": "Walls rise 20.4 m to the cornice, then mansard roofs to about 29 m."
+      },
+      "floorMaterial": "floor.pave-granite",
+      "wallColour": "wall.stone-limestone-warm",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Open sky; the court is a light well for all four wings.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "pavillon-horloge",
+          "kind": "arch"
+        },
+        {
+          "to": "salle-perrault",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "salle-perrault",
+      "name": "Colonnade gallery (inside Perrault's east wing)",
+      "nameFr": "Aile de la Colonnade, interieur",
+      "louvreRoom": null,
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 6.4,
+      "footprint": {
+        "x": [
+          252.25,
+          276.0
+        ],
+        "z": [
+          -60.0,
+          60.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 120.0,
+        "width_m": 23.75,
+        "area_m2": 2850,
+        "basis": "derived",
+        "source": "Wing depth from the 160-112.5 relationship. The 183 m Colonnade façade extends 11.5 m beyond the court on each side; that surplus volume belongs to the exterior zone."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 6.4,
+        "notes": null
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.stone-grey",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "The two-storey order keeps the room in deep shade behind the columns; light comes in horizontal bars between them.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "cour-carree",
+          "kind": "arch"
+        }
+      ]
+    },
+    {
+      "id": "sully-l2-corridor",
+      "name": "Sully level 2, north corridor",
+      "nameFr": "Sully, niveau 2, couloir nord",
+      "louvreRoom": null,
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        2
+      ],
+      "floorY": 13.6,
+      "clearHeight_m": 4.2,
+      "footprint": {
+        "x": [
+          116.0,
+          139.75
+        ],
+        "z": [
+          -80.0,
+          -14.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 66.0,
+        "width_m": 23.75,
+        "area_m2": 1568,
+        "basis": "invented",
+        "source": "Circulation invented for the replica to reach the Dutch rooms on level 2 without modelling the whole Lemercier wing. Its footprint is real wing volume; its use as one corridor is ours."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 4.2,
+        "notes": null
+      },
+      "floorMaterial": "floor.parquet-poitiers",
+      "wallColour": "wall.ochre-light",
+      "trim": "trim.gilt",
+      "lighting": "Windows on the court side only; intermittent bands of daylight.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "pavillon-horloge",
+          "kind": "stair"
+        },
+        {
+          "to": "dutch-rooms",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "dutch-rooms",
+      "name": "Dutch Golden Age rooms",
+      "nameFr": "Peinture hollandaise",
+      "louvreRoom": "837",
+      "wing": "sully",
+      "zone": "sully-interior",
+      "levels": [
+        2
+      ],
+      "floorY": 13.6,
+      "clearHeight_m": 4.2,
+      "footprint": {
+        "x": [
+          139.75,
+          180.0
+        ],
+        "z": [
+          -80.0,
+          -56.25
+        ]
+      },
+      "dimensions": {
+        "length_m": 40.25,
+        "width_m": 23.75,
+        "area_m2": 956,
+        "basis": "derived",
+        "source": "Wing depth; room numbers 837-838 are the Louvre's current location for the two Vermeers."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 4.2,
+        "notes": "Small-scale rooms: low ceilings, top light through a small lantern."
+      },
+      "floorMaterial": "floor.parquet-poitiers",
+      "wallColour": "wall.slate-green",
+      "trim": "trim.wood-oak",
+      "lighting": "Dim and intimate. The Lacemaker hangs in a case and is lit to a much higher level than the room, so it appears to float.",
+      "artworks": [
+        "lacemaker",
+        "astronomer"
+      ],
+      "portals": [
+        {
+          "to": "sully-l2-corridor",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "passage-richelieu",
+      "name": "Passage Richelieu",
+      "nameFr": "Passage Richelieu",
+      "louvreRoom": null,
+      "wing": "richelieu",
+      "zone": "richelieu-interior",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 5.0,
+      "footprint": {
+        "x": [
+          -30.0,
+          -16.0
+        ],
+        "z": [
+          -141.0,
+          -70.5
+        ]
+      },
+      "dimensions": {
+        "length_m": 70.5,
+        "width_m": 14.0,
+        "area_m2": 987,
+        "basis": "estimated",
+        "source": "The real passage runs under the Pavillon de la Bibliotheque between the Cour Puget and the Cour Marly. Its 14 m width is our estimate."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 5.0,
+        "notes": "Stone soffit; daylight slots."
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.ochre-light",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "A long shaded slot between two sunlit courts; the end of the passage glows.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "passage-richelieu-link",
+          "kind": "passage"
+        },
+        {
+          "to": "cour-marly",
+          "kind": "open"
+        },
+        {
+          "to": "cour-puget",
+          "kind": "open"
+        },
+        {
+          "to": "escalier-richelieu",
+          "kind": "stair"
+        }
+      ]
+    },
+    {
+      "id": "cour-marly",
+      "name": "Cour Marly",
+      "nameFr": "Cour Marly",
+      "louvreRoom": "102",
+      "wing": "richelieu",
+      "zone": "richelieu-interior",
+      "levels": [
+        0,
+        -1
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 20.0,
+      "footprint": {
+        "x": [
+          -84.0,
+          -30.0
+        ],
+        "z": [
+          -129.0,
+          -88.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 54.0,
+        "width_m": 41.0,
+        "area_m2": 2214,
+        "basis": "measured-roof/derived-floor",
+        "source": "Glazed roof 57.05 x 42.61 m (the structural record); internal north-south width 41 m at the west end (Arup). Floor 54 x 41 is inset from the roof by the cornice propping."
+      },
+      "ceiling": {
+        "type": "glazed-skylight",
+        "height_m": 20.0,
+        "notes": "Pei/Macary shallow vault on steel tubes, propped off the old cornices, 7 m of rise above the cornice line and no higher, so it stays behind the Rivoli roofline. Aluminium louvers below the glass diffuse the light."
+      },
+      "floorMaterial": "floor.marble-checker",
+      "wallColour": "wall.ochre-light",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "The best daylight in the museum: a bright diffuse sky over the whole court, terraced so the Marly Horses at the top catch it and the lower terrace stays in soft shadow.",
+      "artworks": [
+        "marly-horses"
+      ],
+      "portals": [
+        {
+          "to": "passage-richelieu",
+          "kind": "open"
+        }
+      ]
+    },
+    {
+      "id": "cour-puget",
+      "name": "Cour Puget",
+      "nameFr": "Cour Puget",
+      "louvreRoom": "105",
+      "wing": "richelieu",
+      "zone": "richelieu-interior",
+      "levels": [
+        -1
+      ],
+      "floorY": -4.5,
+      "clearHeight_m": 18.0,
+      "footprint": {
+        "x": [
+          -16.0,
+          34.0
+        ],
+        "z": [
+          -129.0,
+          -88.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 50.0,
+        "width_m": 41.0,
+        "area_m2": 2050,
+        "basis": "measured-width/derived-length",
+        "source": "Arup: north-south internal width falls from over 41 m at Marly's west end to under 28 m at Khorsabad's east, so Puget sits between and we hold 41 m for it. Floor is three terraced levels; the Louvre labels the room Level -1."
+      },
+      "ceiling": {
+        "type": "glazed-skylight",
+        "height_m": 18.0,
+        "notes": "Same vault system as Marly, with openable smoke vents under the eaves."
+      },
+      "floorMaterial": "floor.marble-checker",
+      "wallColour": "wall.ochre-light",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Diffuse from above; the terraces create a shaft that keeps the lower level in cool shade — the intended contrast with Marly.",
+      "artworks": [
+        "milo-of-croton"
+      ],
+      "portals": [
+        {
+          "to": "passage-richelieu",
+          "kind": "open"
+        },
+        {
+          "to": "cour-khorsabad",
+          "kind": "open"
+        }
+      ]
+    },
+    {
+      "id": "cour-khorsabad",
+      "name": "Cour Khorsabad",
+      "nameFr": "Cour Khorsabad",
+      "louvreRoom": "229",
+      "wing": "richelieu",
+      "zone": "richelieu-interior",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 12.0,
+      "footprint": {
+        "x": [
+          34.0,
+          66.0
+        ],
+        "z": [
+          -129.0,
+          -88.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 32.0,
+        "width_m": 41.0,
+        "area_m2": 1312,
+        "basis": "measured-width/derived-length",
+        "source": "Arup puts the east end at under 28 m north-south; the Louvre names the room 229 (Elae Omidyar - Mir-Djalali). 32 m is the smallest consistent footprint for four lamassu of 4.36 m plus circulation."
+      },
+      "ceiling": {
+        "type": "glazed-skylight",
+        "height_m": 12.0,
+        "notes": "Third of Pei's three courts; the roof here is lower than Marly's."
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.slate-green",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Cool and even, the opposite of the Egyptian crypt. The gypsum alabaster of the bulls is almost white against the slate walls.",
+      "artworks": [
+        "lamassu-khorsabad"
+      ],
+      "portals": [
+        {
+          "to": "cour-puget",
+          "kind": "open"
+        },
+        {
+          "to": "salle-hammurabi",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "salle-hammurabi",
+      "name": "Room of the Code of Hammurabi",
+      "nameFr": "Salle du code de Hammurabi",
+      "louvreRoom": "227",
+      "wing": "richelieu",
+      "zone": "richelieu-interior",
+      "levels": [
+        0
+      ],
+      "floorY": 0.0,
+      "clearHeight_m": 5.5,
+      "footprint": {
+        "x": [
+          66.0,
+          90.0
+        ],
+        "z": [
+          -116.0,
+          -90.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 24.0,
+        "width_m": 26.0,
+        "area_m2": 624,
+        "basis": "estimated",
+        "source": "Mesopotamian rooms are small and dense; the footprint is ours, the room number is the Louvre's."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 5.5,
+        "notes": null
+      },
+      "floorMaterial": "floor.stone-flag",
+      "wallColour": "wall.slate-green",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Spotlit from above front, everything else dark; the black basalt stele needs a single hard light to show the cuneiform.",
+      "artworks": [
+        "hammurabi"
+      ],
+      "portals": [
+        {
+          "to": "cour-khorsabad",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "escalier-richelieu",
+      "name": "Richelieu staircase",
+      "nameFr": "Escalier Richelieu",
+      "louvreRoom": null,
+      "wing": "richelieu",
+      "zone": "richelieu-interior",
+      "levels": [
+        0,
+        1
+      ],
+      "floorY": 1.0,
+      "clearHeight_m": 14.0,
+      "footprint": {
+        "x": [
+          -16.0,
+          10.0
+        ],
+        "z": [
+          -141.0,
+          -122.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 26.0,
+        "width_m": 19.0,
+        "area_m2": 494,
+        "basis": "invented",
+        "source": "The Richelieu wing's grand stair; its exact plan and level numbering are ours. floorY 1.0 is a half-landing above the courts."
+      },
+      "ceiling": {
+        "type": "vault",
+        "height_m": 14.0,
+        "notes": "Stone vault with an open well."
+      },
+      "floorMaterial": "floor.marble-checker",
+      "wallColour": "wall.ochre-light",
+      "trim": "trim.stone-limestone-warm",
+      "lighting": "Top light down the well.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "passage-richelieu",
+          "kind": "stair"
+        },
+        {
+          "to": "napoleon-iii-grand-salon",
+          "kind": "door"
+        }
+      ]
+    },
+    {
+      "id": "napoleon-iii-grand-salon",
+      "name": "Napoleon III Apartments, Grand Salon",
+      "nameFr": "Appartements Napoleon III, Grand Salon",
+      "louvreRoom": "544",
+      "wing": "richelieu",
+      "zone": "richelieu-interior",
+      "levels": [
+        1
+      ],
+      "floorY": 7.0,
+      "clearHeight_m": 6.5,
+      "footprint": {
+        "x": [
+          -60.0,
+          -30.0
+        ],
+        "z": [
+          -141.0,
+          -122.0
+        ]
+      },
+      "dimensions": {
+        "length_m": 30.0,
+        "width_m": 19.0,
+        "area_m2": 570,
+        "basis": "estimated",
+        "source": "No published dimensions for the salon. 30 x 19 m matches the wing's Rivoli range depth and reads correctly against photographs of the room."
+      },
+      "ceiling": {
+        "type": "flat",
+        "height_m": 6.5,
+        "notes": "Painted and gilded coffered ceiling with a central light, hung with a crystal chandelier."
+      },
+      "floorMaterial": "floor.parquet-versailles",
+      "wallColour": "wall.crimson-silk",
+      "trim": "trim.gilt",
+      "lighting": "Chandelier and wall sconces only, all warm; the most golden room in the palace and the only one that is better at night than by day.",
+      "artworks": [],
+      "portals": [
+        {
+          "to": "escalier-richelieu",
+          "kind": "door"
+        }
+      ]
+    }
+  ],
+  "route": [
+    {
+      "n": 1,
+      "room": "cour-napoleon",
+      "note": "Approach across the Cour Napoleon; the pyramid is the entrance."
+    },
+    {
+      "n": 2,
+      "room": "hall-napoleon",
+      "note": "Down the spiral stair under the pyramid."
+    },
+    {
+      "n": 3,
+      "room": "passage-denon",
+      "note": "East under the court."
+    },
+    {
+      "n": 4,
+      "room": "escalier-daru",
+      "note": "Up three flights; the Winged Victory stands at the top landing and is visible from the first step."
+    },
+    {
+      "n": 5,
+      "room": "salle-daru",
+      "note": "Coronation on the long wall; Grande Odalisque and Horatii flanking."
+    },
+    {
+      "n": 6,
+      "room": "salle-denon",
+      "note": "Pass-through: the transition between the David and Delacroix hang."
+    },
+    {
+      "n": 7,
+      "room": "salle-mollien",
+      "note": "Raft of the Medusa, Liberty, Sardanapalus: the three largest Romantic canvases."
+    },
+    {
+      "n": 8,
+      "room": "salle-des-etats",
+      "note": "Mona Lisa free-standing opposite the Wedding at Cana."
+    },
+    {
+      "n": 9,
+      "room": "galerie-des-sessions",
+      "note": "Reconstructed link; turn south toward the river."
+    },
+    {
+      "n": 10,
+      "room": "grande-galerie",
+      "note": "Walk east down 268 m of top-lit Italian painting."
+    },
+    {
+      "n": 11,
+      "room": "salon-carre",
+      "note": "Turn north; the gallery ends."
+    },
+    {
+      "n": 12,
+      "room": "rotonde-apollon",
+      "note": "Threshold of the Apollo gallery."
+    },
+    {
+      "n": 13,
+      "room": "galerie-apollon",
+      "note": "61 m of gold; the crown jewels in wall cases on the left."
+    },
+    {
+      "n": 14,
+      "room": "pavillon-horloge",
+      "note": "Out through the clock pavilion to the Cour Carree."
+    },
+    {
+      "n": 15,
+      "room": "cour-carree",
+      "note": "Cross the court toward Perrault's colonnade, then return."
+    },
+    {
+      "n": 16,
+      "room": "salle-perrault",
+      "note": "Behind the coupled columns."
+    },
+    {
+      "n": 17,
+      "room": "escalier-henri-ii",
+      "note": "Down into the Renaissance wing."
+    },
+    {
+      "n": 18,
+      "room": "salle-des-caryatides",
+      "note": "Diana of Versailles and the Borghese Gladiator among Roman marbles."
+    },
+    {
+      "n": 19,
+      "room": "salle-grec-346",
+      "note": "South wing, Greek classical."
+    },
+    {
+      "n": 20,
+      "room": "salle-venus-milo",
+      "note": "The Venus stands free, in the middle of the room."
+    },
+    {
+      "n": 21,
+      "room": "sphinx-crypt",
+      "note": "Optional spur: the pink granite sphinx in near darkness."
+    },
+    {
+      "n": 22,
+      "room": "pavillon-horloge",
+      "note": "Retrace to the courtyard."
+    },
+    {
+      "n": 23,
+      "room": "passage-richelieu-link",
+      "note": "Down and north under the Cour Napoleon."
+    },
+    {
+      "n": 24,
+      "room": "passage-richelieu",
+      "note": "Between the two sculpture courts."
+    },
+    {
+      "n": 25,
+      "room": "cour-marly",
+      "note": "The Marly Horses on the top terrace under the glass vault."
+    },
+    {
+      "n": 26,
+      "room": "cour-puget",
+      "note": "Down one terrace; Milo of Croton."
+    },
+    {
+      "n": 27,
+      "room": "cour-khorsabad",
+      "note": "The lamassu in the third court."
+    },
+    {
+      "n": 28,
+      "room": "salle-hammurabi",
+      "note": "The stele, spotlit."
+    },
+    {
+      "n": 29,
+      "room": "escalier-richelieu",
+      "note": "Up behind the north range."
+    },
+    {
+      "n": 30,
+      "room": "napoleon-iii-grand-salon",
+      "note": "End in crimson and gold under a chandelier."
+    }
+  ],
+  "omissions": [
+    "Sully level -1 (medieval Louvre moat, Louvre history rooms) and level 2 apart from the Dutch rooms.",
+    "Denon Egyptian galleries, the Cour du Sphinx, and Cour Lefueil in the middle of the Denon wing.",
+    "Richelieu level 2 (Northern schools, Rubens Medici cycle) and the whole Aile de Rohan / Aile de Marsan / Pavillon de Marsan, which is now the Musee des Arts Decoratifs.",
+    "The Salle des Sept Chefs, the Escalier Mollien and the Salle des Sessions; the invented galerie-des-sessions stands in for them.",
+    "All of the museum west of the Pavillon de Flore and east of the Colonnade."
+  ]
+}
