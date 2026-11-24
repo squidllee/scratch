@@ -11,7 +11,7 @@ import { buildColonnade } from './colonnade';
 import { buildHorloge, buildLescot } from './ring';
 import { chimneyTransforms, mansard, rotunda } from './roof';
 import { chimneyUnit, exteriorMaterial, groundQuad, InstanceSink, bakeWorldLight, ROOF_ZINC, shadeUnit } from './parts';
-import { applyAtmosphere, courtTrees, distantCity, ground, skyDome } from './context';
+import { CONTEXT, courtTrees, distantCity, ground, skyDome } from './context';
 
 /**
  * The exterior zone: every façade and every roof of the Louvre, plus the sky and the ground the
@@ -129,14 +129,14 @@ const SPAWNS: SpawnPoint[] = [
   },
   {
     id: 'roofline-above',
-    position: [150, 62, 88],
-    lookAt: [10, 20, -16],
-    label: 'From above: mansards, pavilions and the Sully ring',
+    position: [206, 92, 72],
+    lookAt: [176, 18, 0],
+    label: 'From above: the Cour Carrée ring and its four mansards',
   },
 ];
 
 export const createZone = (ctx: ZoneContext): Zone => {
-  const planReport = assertPlan();
+  assertPlan();
   const rng = ctx.rng('exterior');
   const sink = new InstanceSink();
 
@@ -198,7 +198,6 @@ export const createZone = (ctx: ZoneContext): Zone => {
     ['esplanade-rivoli', rivoliMerged],
   ]);
 
-  let atmosphereApplied = false;
 
   // Debug probe (only with ?debug=exterior): lets a headless run raycast the frame and name what
   // it hits, because no agent on this crew can look at the render.
@@ -237,19 +236,15 @@ export const createZone = (ctx: ZoneContext): Zone => {
     group,
     roomGroups,
     spawnPoints: SPAWNS,
+    // Paris daylight: a warm haze background and light exponential fog, so a wing 200 m away is
+    // still a building and the distant city falls into haze instead of into black.
+    atmosphere: { background: CONTEXT.haze, fog: { color: CONTEXT.haze, density: 0.0012 } },
     update(_dt: number, camera: THREE.Camera): void {
       if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).__ext) {
         (window as unknown as Record<string, unknown>).__extCamera = camera;
       }
       // The sky travels with the viewer, so the dome can never be clipped by the far plane.
       sky.position.set(camera.position.x, 0, camera.position.z);
-      if (atmosphereApplied) return;
-      const scene = group.parent;
-      if (scene instanceof THREE.Scene) {
-        applyAtmosphere(scene);
-        atmosphereApplied = true;
-        console.info('[exterior] plan ' + JSON.stringify(planReport));
-      }
     },
     dispose(): void {
       group.traverse((o) => {

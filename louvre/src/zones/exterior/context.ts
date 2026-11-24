@@ -57,18 +57,6 @@ export function skyDome(): THREE.Mesh {
   return mesh;
 }
 
-/** Replace the engine's interior-black fog and background with daylight. Idempotent. */
-export function applyAtmosphere(scene: THREE.Scene): void {
-  const target = new THREE.Color(CONTEXT.haze);
-  if (!scene.background || (scene.background as THREE.Color).getHexString() !== target.getHexString()) {
-    scene.background = target;
-  }
-  const fog = scene.fog;
-  if (!(fog instanceof THREE.Fog) || Math.abs(fog.far - 1500) > 1) {
-    scene.fog = new THREE.Fog(target, 220, 1500);
-  }
-}
-
 /** The ground the whole museum stands on, the quays, and the Seine below them. */
 export function ground(): THREE.Group {
   const group = new THREE.Group();

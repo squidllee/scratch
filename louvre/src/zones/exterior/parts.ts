@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { boxGeo, quadGeo, mergeAll, bakeAo, smoothstep, type ProfilePoint } from '../../core/geom';
 import { instanced } from '../../core/merge';
-import { mat } from '../../core/materials';
+import { mat, outdoorMat } from '../../core/materials';
 
 /**
  * Facade vocabulary for the exterior zone.
@@ -433,14 +433,14 @@ export function groundQuad(x0: number, x1: number, z0: number, z1: number, y = 0
 /**
  * The palette's zinc roof and gold leaf carry `metalness` for interiors lit by an environment. Out
  * here there is no environment map, and a metal with nothing to reflect renders black: the meas-
- * ured frame had the mansard at RGB 26,32,39. These are the same palette colours, at the low
- * metalness an exterior daylight pass needs.
+ * ured frame had the mansard at RGB 26,32,39. `outdoorMat` is core's exterior tuning of the same
+ * palette colours.
  */
-export const ROOF_ZINC = 'exterior.zinc';
-export const ORNAMENT_GOLD = 'exterior.gold';
+export const ROOF_ZINC = 'context.zinc-roof';
+export const ORNAMENT_GOLD = 'gold.leaf';
 
 export function exteriorMaterial(name: string): THREE.Material {
-  if (name === ROOF_ZINC) return mat('context.zinc-roof', { metalness: 0.06, roughness: 0.62 });
-  if (name === ORNAMENT_GOLD) return mat('gold.leaf', { metalness: 0.12, roughness: 0.42 });
+  if (name === ROOF_ZINC) return outdoorMat(ROOF_ZINC);
+  if (name === ORNAMENT_GOLD) return outdoorMat(ORNAMENT_GOLD, { metalness: 0.14, roughness: 0.44 });
   return mat(name);
 }
